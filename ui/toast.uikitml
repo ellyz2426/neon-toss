@@ -1,0 +1,8 @@
+<!-- ui/toast.uikitml -->
+<style>
+  .panel { display: flex; padding: 0.5; background-color: rgba(0,0,0,0.6); border-color: #ffcc00; border-width: 0.05; border-radius: 0.5; align-items: center; }
+  .text { font-size: 1.8; color: #ffcc00; font-weight: bold; }
+</style>
+<div class="panel">
+  <span id="toast-text" class="text"></span>
+</div>

@@ -1,0 +1,8 @@
+<!-- ui/power.uikitml -->
+<style>
+  .bar { display: flex; padding: 0.3; background-color: rgba(0,0,0,0.6); border-color: #00ffff; border-width: 0.03; border-radius: 0.3; }
+  .fill { font-size: 1.2; color: #00ffff; font-weight: bold; }
+</style>
+<div class="bar">
+  <span id="power-bar" class="fill">..........</span>
+</div>

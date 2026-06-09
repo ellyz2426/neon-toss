@@ -1,0 +1,27 @@
+<!-- ui/title.uikitml -->
+<style>
+  .panel { display: flex; flex-direction: column; padding: 2; background-color: rgba(0,0,0,0.85); border-color: #00ffff; border-width: 0.1; border-radius: 1; align-items: center; gap: 0.8; }
+  .title { font-size: 4; color: #00ffff; font-weight: bold; }
+  .subtitle { font-size: 1.5; color: #888888; }
+  .level { font-size: 1.2; color: #ffcc00; }
+  .btn { font-size: 1.8; color: #00ffff; background-color: rgba(0,255,255,0.1); padding-top: 0.5; padding-bottom: 0.5; padding-left: 2; padding-right: 2; border-color: #00ffff; border-width: 0.05; border-radius: 0.5; cursor: pointer; }
+  .btn-row { display: flex; flex-direction: row; gap: 0.5; }
+</style>
+<div class="panel">
+  <span class="title">NEON TOSS</span>
+  <span class="subtitle">Holodeck Ring Toss</span>
+  <span id="title-level" class="level">Lv.1 Novice</span>
+  <div id="btn-play" class="btn">PLAY</div>
+  <div class="btn-row">
+    <div id="btn-scores" class="btn">SCORES</div>
+    <div id="btn-achieve" class="btn">ACHIEVEMENTS</div>
+  </div>
+  <div class="btn-row">
+    <div id="btn-stats" class="btn">STATS</div>
+    <div id="btn-skins" class="btn">RING SKINS</div>
+  </div>
+  <div class="btn-row">
+    <div id="btn-settings" class="btn">SETTINGS</div>
+    <div id="btn-help" class="btn">HELP</div>
+  </div>
+</div>

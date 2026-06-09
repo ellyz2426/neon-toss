@@ -1,0 +1,23 @@
+<!-- ui/stats.uikitml -->
+<style>
+  .panel { display: flex; flex-direction: column; padding: 2; background-color: rgba(0,0,0,0.85); border-color: #00ffff; border-width: 0.1; border-radius: 1; gap: 0.4; align-items: center; }
+  .title { font-size: 2.5; color: #00ffff; font-weight: bold; }
+  .row { display: flex; flex-direction: row; gap: 1; }
+  .label { font-size: 1.2; color: #888888; }
+  .value { font-size: 1.2; color: #00ffff; font-weight: bold; }
+  .back { font-size: 1.4; color: #888888; background-color: rgba(128,128,128,0.1); padding-top: 0.3; padding-bottom: 0.3; padding-left: 1.5; padding-right: 1.5; border-color: #555555; border-width: 0.05; border-radius: 0.5; cursor: pointer; }
+</style>
+<div class="panel">
+  <span class="title">CAREER STATS</span>
+  <div class="row"><span class="label">Games</span><span id="st-games" class="value">0</span></div>
+  <div class="row"><span class="label">Total Score</span><span id="st-score" class="value">0</span></div>
+  <div class="row"><span class="label">Best Score</span><span id="st-best" class="value">0</span></div>
+  <div class="row"><span class="label">Rings Thrown</span><span id="st-rings" class="value">0</span></div>
+  <div class="row"><span class="label">Ringers</span><span id="st-hits" class="value">0</span></div>
+  <div class="row"><span class="label">Accuracy</span><span id="st-acc" class="value">0%</span></div>
+  <div class="row"><span class="label">Best Combo</span><span id="st-combo" class="value">0</span></div>
+  <div class="row"><span class="label">Perfect Games</span><span id="st-perfect" class="value">0</span></div>
+  <div class="row"><span class="label">Play Time</span><span id="st-time" class="value">0m</span></div>
+  <div class="row"><span class="label">Player</span><span id="st-level" class="value">Lv.1 Novice</span></div>
+  <div id="btn-stats-back" class="back">BACK</div>
+</div>

@@ -1,0 +1,27 @@
+<!-- ui/hud.uikitml -->
+<style>
+  .hud { display: flex; flex-direction: column; padding: 1; background-color: rgba(0,0,0,0.7); border-color: #00ffff; border-width: 0.05; border-radius: 0.5; gap: 0.3; }
+  .row { display: flex; flex-direction: row; gap: 1; }
+  .label { font-size: 1; color: #666666; }
+  .value { font-size: 1.8; color: #00ffff; font-weight: bold; }
+  .combo { font-size: 2; color: #ffcc00; font-weight: bold; }
+  .mode { font-size: 1; color: #888888; }
+</style>
+<div class="hud">
+  <div class="row">
+    <span class="label">SCORE</span>
+    <span id="hud-score" class="value">0</span>
+    <span class="label">RINGS</span>
+    <span id="hud-rings" class="value">10</span>
+  </div>
+  <div class="row">
+    <span class="label">HITS</span>
+    <span id="hud-hits" class="value">0</span>
+    <span class="label">TIME</span>
+    <span id="hud-time" class="value">--</span>
+  </div>
+  <div class="row">
+    <span id="hud-combo" class="combo"></span>
+    <span id="hud-mode" class="mode">CLASSIC</span>
+  </div>
+</div>

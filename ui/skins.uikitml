@@ -1,0 +1,26 @@
+<!-- ui/skins.uikitml -->
+<style>
+  .panel { display: flex; flex-direction: column; padding: 2; background-color: rgba(0,0,0,0.85); border-color: #00ffff; border-width: 0.1; border-radius: 1; gap: 0.4; align-items: center; }
+  .title { font-size: 2.5; color: #00ffff; font-weight: bold; }
+  .row { display: flex; flex-direction: row; gap: 0.5; }
+  .skin-btn { display: flex; flex-direction: column; padding-top: 0.3; padding-bottom: 0.3; padding-left: 0.8; padding-right: 0.8; background-color: rgba(0,255,255,0.05); border-color: #333333; border-width: 0.03; border-radius: 0.3; cursor: pointer; align-items: center; gap: 0.2; }
+  .skin-name { font-size: 1; color: #00ffff; }
+  .skin-status { font-size: 0.8; color: #888888; }
+  .back { font-size: 1.4; color: #888888; background-color: rgba(128,128,128,0.1); padding-top: 0.3; padding-bottom: 0.3; padding-left: 1.5; padding-right: 1.5; border-color: #555555; border-width: 0.05; border-radius: 0.5; cursor: pointer; }
+</style>
+<div class="panel">
+  <span class="title">RING SKINS</span>
+  <div class="row">
+    <div id="btn-skin-0" class="skin-btn"><span id="skin-name-0" class="skin-name">Neon Cyan</span><span id="skin-status-0" class="skin-status">EQUIPPED</span></div>
+    <div id="btn-skin-1" class="skin-btn"><span id="skin-name-1" class="skin-name">Solar Flare</span><span id="skin-status-1" class="skin-status">50 ringers</span></div>
+    <div id="btn-skin-2" class="skin-btn"><span id="skin-name-2" class="skin-name">Plasma Pink</span><span id="skin-status-2" class="skin-status">5K score</span></div>
+    <div id="btn-skin-3" class="skin-btn"><span id="skin-name-3" class="skin-name">Frost Ring</span><span id="skin-status-3" class="skin-status">10 games</span></div>
+  </div>
+  <div class="row">
+    <div id="btn-skin-4" class="skin-btn"><span id="skin-name-4" class="skin-name">Toxic Green</span><span id="skin-status-4" class="skin-status">x5 combo</span></div>
+    <div id="btn-skin-5" class="skin-btn"><span id="skin-name-5" class="skin-name">Royal Gold</span><span id="skin-status-5" class="skin-status">Perfect game</span></div>
+    <div id="btn-skin-6" class="skin-btn"><span id="skin-name-6" class="skin-name">Void Purple</span><span id="skin-status-6" class="skin-status">80% accuracy</span></div>
+    <div id="btn-skin-7" class="skin-btn"><span id="skin-name-7" class="skin-name">Inferno</span><span id="skin-status-7" class="skin-status">All modes</span></div>
+  </div>
+  <div id="btn-skins-back" class="back">BACK</div>
+</div>

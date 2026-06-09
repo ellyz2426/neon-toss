@@ -1,0 +1,29 @@
+<!-- ui/modeselect.uikitml -->
+<style>
+  .panel { display: flex; flex-direction: column; padding: 2; background-color: rgba(0,0,0,0.85); border-color: #00ffff; border-width: 0.1; border-radius: 1; align-items: center; gap: 0.6; }
+  .title { font-size: 3; color: #00ffff; font-weight: bold; }
+  .btn { font-size: 1.6; color: #00ffff; background-color: rgba(0,255,255,0.1); padding-top: 0.4; padding-bottom: 0.4; padding-left: 2; padding-right: 2; border-color: #00ffff; border-width: 0.05; border-radius: 0.5; cursor: pointer; }
+  .btn-row { display: flex; flex-direction: row; gap: 0.5; }
+  .desc { font-size: 1; color: #666666; }
+  .back { font-size: 1.4; color: #888888; background-color: rgba(128,128,128,0.1); padding-top: 0.3; padding-bottom: 0.3; padding-left: 1.5; padding-right: 1.5; border-color: #555555; border-width: 0.05; border-radius: 0.5; cursor: pointer; }
+</style>
+<div class="panel">
+  <span class="title">SELECT MODE</span>
+  <div class="btn-row">
+    <div id="btn-classic" class="btn">CLASSIC</div>
+    <div id="btn-speed" class="btn">SPEED</div>
+  </div>
+  <div class="btn-row">
+    <div id="btn-target" class="btn">TARGET</div>
+    <div id="btn-distance" class="btn">DISTANCE</div>
+  </div>
+  <div class="btn-row">
+    <div id="btn-trick" class="btn">TRICK SHOT</div>
+    <div id="btn-daily" class="btn">DAILY</div>
+  </div>
+  <div class="btn-row">
+    <div id="btn-survival" class="btn">SURVIVAL</div>
+    <div id="btn-practice" class="btn">PRACTICE</div>
+  </div>
+  <div id="btn-mode-back" class="back">BACK</div>
+</div>

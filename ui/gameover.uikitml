@@ -1,0 +1,33 @@
+<!-- ui/gameover.uikitml -->
+<style>
+  .panel { display: flex; flex-direction: column; padding: 2; background-color: rgba(0,0,0,0.9); border-color: #00ffff; border-width: 0.1; border-radius: 1; align-items: center; gap: 0.5; }
+  .title { font-size: 3; color: #00ffff; font-weight: bold; }
+  .row { display: flex; flex-direction: row; gap: 1.5; }
+  .label { font-size: 1.2; color: #666666; }
+  .value { font-size: 2; color: #00ffff; font-weight: bold; }
+  .score-big { font-size: 4; color: #ffcc00; font-weight: bold; }
+  .mode-label { font-size: 1.2; color: #888888; }
+  .btn { font-size: 1.8; color: #00ffff; background-color: rgba(0,255,255,0.1); padding-top: 0.5; padding-bottom: 0.5; padding-left: 2; padding-right: 2; border-color: #00ffff; border-width: 0.05; border-radius: 0.5; cursor: pointer; }
+  .btn-row { display: flex; flex-direction: row; gap: 1; }
+</style>
+<div class="panel">
+  <span class="title">GAME OVER</span>
+  <span id="go-mode" class="mode-label">CLASSIC</span>
+  <span id="go-score" class="score-big">0</span>
+  <div class="row">
+    <span class="label">RINGS</span>
+    <span id="go-rings" class="value">0/0</span>
+  </div>
+  <div class="row">
+    <span class="label">ACCURACY</span>
+    <span id="go-accuracy" class="value">0%</span>
+  </div>
+  <div class="row">
+    <span class="label">BEST COMBO</span>
+    <span id="go-combo" class="value">0</span>
+  </div>
+  <div class="btn-row">
+    <div id="btn-rematch" class="btn">REMATCH</div>
+    <div id="btn-go-title" class="btn">MENU</div>
+  </div>
+</div>
