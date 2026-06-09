@@ -39,6 +39,10 @@
     <div id="btn-ricochet" class="btn btn-new">RICOCHET</div>
     <div id="btn-elimination" class="btn btn-new">ELIMINATION</div>
   </div>
+  <div class="btn-row">
+    <div id="btn-duel" class="btn btn-new">DUEL</div>
+    <div id="btn-arcade" class="btn btn-new">ARCADE</div>
+  </div>
   <div id="btn-custom" class="btn btn-special">CUSTOM</div>
   <div id="btn-mode-back" class="back">BACK</div>
 </div>

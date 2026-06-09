@@ -1,0 +1,52 @@
+<style>
+  .arcade-panel {
+    display: flex;
+    flex-direction: row;
+    padding: 1.5;
+    background-color: rgba(0, 0, 0, 0.85);
+    border-color: #ff33ff;
+    border-width: 0.15;
+    border-radius: 0.8;
+    gap: 3;
+    align-items: center;
+  }
+  .arcade-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3;
+  }
+  .arcade-label {
+    font-size: 1.2;
+    color: #888888;
+  }
+  .arcade-val {
+    font-size: 2;
+    color: #ff33ff;
+    font-weight: bold;
+  }
+  .lives-text {
+    font-size: 2;
+    color: #ff3344;
+    font-weight: bold;
+  }
+  .level-text {
+    font-size: 2;
+    color: #ffcc00;
+    font-weight: bold;
+  }
+</style>
+<div class="arcade-panel">
+  <div class="arcade-col">
+    <span class="arcade-label">LEVEL</span>
+    <span id="arc-level" class="level-text">1</span>
+  </div>
+  <div class="arcade-col">
+    <span class="arcade-label">LIVES</span>
+    <span id="arc-lives" class="lives-text">♥♥♥</span>
+  </div>
+  <div class="arcade-col">
+    <span class="arcade-label">BONUS</span>
+    <span id="arc-bonus" class="arcade-val">--</span>
+  </div>
+</div>

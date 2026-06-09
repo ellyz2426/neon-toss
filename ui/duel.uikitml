@@ -1,0 +1,78 @@
+<style>
+  .duel-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 2;
+    background-color: rgba(0, 0, 0, 0.85);
+    border-color: #ff8800;
+    border-width: 0.15;
+    border-radius: 1;
+    gap: 1;
+    align-items: center;
+  }
+  .duel-title {
+    font-size: 2.5;
+    color: #ff8800;
+    font-weight: bold;
+  }
+  .duel-row {
+    display: flex;
+    flex-direction: row;
+    gap: 4;
+    align-items: center;
+    width: 100%;
+    justify-content: center;
+  }
+  .duel-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5;
+    min-width: 30%;
+  }
+  .player-label {
+    font-size: 1.8;
+    color: #00ffff;
+    font-weight: bold;
+  }
+  .ai-label {
+    font-size: 1.8;
+    color: #ff3344;
+    font-weight: bold;
+  }
+  .score-big {
+    font-size: 3;
+    color: #ffffff;
+    font-weight: bold;
+  }
+  .vs-text {
+    font-size: 2;
+    color: #888888;
+    font-weight: bold;
+  }
+  .turn-text {
+    font-size: 1.5;
+    color: #ffcc00;
+  }
+  .round-text {
+    font-size: 1.4;
+    color: #aaaaaa;
+  }
+</style>
+<div class="duel-panel">
+  <span class="duel-title">DUEL MODE</span>
+  <span id="duel-round" class="round-text">Round 1 of 3</span>
+  <div class="duel-row">
+    <div class="duel-col">
+      <span class="player-label">YOU</span>
+      <span id="duel-p-score" class="score-big">0</span>
+    </div>
+    <span class="vs-text">VS</span>
+    <div class="duel-col">
+      <span class="ai-label">CPU</span>
+      <span id="duel-ai-score" class="score-big">0</span>
+    </div>
+  </div>
+  <span id="duel-turn" class="turn-text">YOUR TURN</span>
+  <span id="duel-rings" class="round-text">Rings: 5</span>
+</div>

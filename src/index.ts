@@ -21,7 +21,7 @@ type GameState = 'title' | 'modeSelect' | 'difficulty' | 'playing' | 'paused' |
 
 type GameMode = 'classic' | 'speed' | 'target' | 'distance' | 'trick' | 'daily' |
   'survival' | 'practice' | 'marathon' | 'precision' | 'carnival' | 'zen' |
-  'ricochet' | 'elimination' | 'custom';
+  'ricochet' | 'elimination' | 'duel' | 'arcade' | 'custom';
 type Difficulty = 'easy' | 'medium' | 'hard';
 type PowerUpType = 'multi' | 'magnet' | 'fire' | 'giant' | 'ghost' | 'slowmo' | 'laser' | 'bounce';
 
@@ -81,6 +81,8 @@ interface SaveData {
     ricochetBounceScores: number; eliminationClears: number;
     laserAims: number; bounceRingers: number;
     frenzyBonuses: number; boardClears: number;
+    duelsWon: number; duelsPlayed: number;
+    bestArcadeLevel: number; arcadeGamesPlayed: number;
   };
   settings: {
     masterVol: number; sfxVol: number; musicVol: number;
@@ -170,6 +172,8 @@ const THEMES: Theme[] = [
   { name: 'Matrix', grid: '#00ff44', accent: '#00ff44', bg: '#001a00', fog: '#001a00', wall: '#003300', peg: '#00cc33', ring: '#00ff44', glow: '#00ff44' },
   { name: 'Lava Core', grid: '#ff4400', accent: '#ff6600', bg: '#0a0200', fog: '#0a0200', wall: '#1a0800', peg: '#cc3300', ring: '#ff4400', glow: '#ff6600' },
   { name: 'Ice Palace', grid: '#88ccff', accent: '#aaddff', bg: '#080c14', fog: '#080c14', wall: '#0a1525', peg: '#6699cc', ring: '#88ccff', glow: '#aaddff' },
+  { name: 'Midnight Gold', grid: '#cc9933', accent: '#ddaa44', bg: '#0a0800', fog: '#0a0800', wall: '#1a1000', peg: '#aa7722', ring: '#cc9933', glow: '#ddaa44' },
+  { name: 'Neon Frost', grid: '#66eeff', accent: '#88ffff', bg: '#060e10', fog: '#060e10', wall: '#0a1a1e', peg: '#44bbcc', ring: '#66eeff', glow: '#88ffff' },
 ];
 
 const RING_SKINS: RingSkin[] = [
@@ -191,7 +195,9 @@ const RING_SKINS: RingSkin[] = [
   { name: 'Neon Rose', color: '#ff66aa', emissive: '#cc3377', glow: '#ff88cc', unlock: '200 ringers', condition: s => s.stats.ringerCount >= 200 },
   { name: 'Thunder', color: '#ffff33', emissive: '#cccc00', glow: '#ffff66', unlock: 'x8 combo in ricochet', condition: s => s.stats.ricochetBounceScores >= 20 },
   { name: 'Obsidian', color: '#333344', emissive: '#222233', glow: '#555566', unlock: '3 board clears', condition: s => s.stats.boardClears >= 3 },
-  { name: 'Aurora', color: '#44ffaa', emissive: '#22cc77', glow: '#66ffcc', unlock: 'All 14 modes', condition: s => s.stats.modesPlayed.length >= 14 },
+  { name: 'Aurora', color: '#44ffaa', emissive: '#22cc77', glow: '#66ffcc', unlock: 'All 16 modes', condition: s => s.stats.modesPlayed.length >= 16 },
+  { name: 'Ember', color: '#ff6622', emissive: '#cc4411', glow: '#ff8844', unlock: 'Win 3 duels', condition: s => s.stats.duelsWon >= 3 },
+  { name: 'Starlight', color: '#eeeeff', emissive: '#ccccee', glow: '#ffffff', unlock: 'Arcade level 10', condition: s => s.stats.bestArcadeLevel >= 10 },
 ];
 
 const POWER_UP_DEFS: PowerUpDef[] = [
@@ -364,6 +370,37 @@ const ACHIEVEMENTS: Achievement[] = [
   { id: 'layout_zigzag', name: 'Zigzag Player', desc: 'Play on Zigzag layout' },
   { id: 'layout_all', name: 'Layout Explorer', desc: 'Play on all 4 board layouts' },
   { id: 'trail_master', name: 'Trail Blazer', desc: 'Throw 500 total rings' },
+  // Duel achievements (146-160)
+  { id: 'duel_first', name: 'Challenger', desc: 'Complete a Duel match' },
+  { id: 'duel_win', name: 'Victor', desc: 'Win a Duel match' },
+  { id: 'duel_win_3', name: 'Champion Duelist', desc: 'Win 3 Duel matches' },
+  { id: 'duel_win_10', name: 'Duel Legend', desc: 'Win 10 Duel matches' },
+  { id: 'duel_perfect', name: 'Perfect Duel', desc: '100% accuracy in a Duel' },
+  { id: 'duel_comeback', name: 'Comeback Kid', desc: 'Win a Duel after trailing in round 2' },
+  { id: 'duel_sweep', name: 'Clean Sweep', desc: 'Win all 3 rounds of a Duel' },
+  { id: 'duel_golden_3', name: 'Golden Duelist', desc: 'Ring 3 golden pegs in a single Duel' },
+  { id: 'duel_score_2k', name: 'Duel Grand', desc: 'Score 2K in a single Duel' },
+  { id: 'duel_dominate', name: 'Domination', desc: 'Win a Duel round by 500+ points' },
+  // Arcade achievements (161-175)
+  { id: 'arcade_first', name: 'Insert Coin', desc: 'Complete an Arcade run' },
+  { id: 'arcade_lv5', name: 'Level 5', desc: 'Reach Arcade level 5' },
+  { id: 'arcade_lv10', name: 'Level 10', desc: 'Reach Arcade level 10' },
+  { id: 'arcade_lv20', name: 'Level 20', desc: 'Reach Arcade level 20' },
+  { id: 'arcade_1up', name: 'Extra Life', desc: 'Earn an extra life in Arcade' },
+  { id: 'arcade_bonus', name: 'Bonus Round', desc: 'Trigger a bonus round in Arcade' },
+  { id: 'arcade_no_miss_lv', name: 'Perfect Level', desc: 'Clear an Arcade level with 0 misses' },
+  { id: 'arcade_3_perfect', name: 'Triple Perfect', desc: 'Clear 3 Arcade levels with 0 misses' },
+  { id: 'arcade_score_5k', name: 'Arcade Gold', desc: 'Score 5K in Arcade mode' },
+  { id: 'arcade_score_10k', name: 'Arcade Platinum', desc: 'Score 10K in Arcade mode' },
+  { id: 'arcade_streak_10', name: 'Arcade Streak', desc: '10 consecutive ringers in Arcade' },
+  { id: 'arcade_5_games', name: 'Arcade Regular', desc: 'Play 5 Arcade games' },
+  { id: 'arcade_all_bonus', name: 'Bonus Collector', desc: 'Trigger 3 bonus rounds total' },
+  { id: 'arcade_survive', name: 'Last Chance', desc: 'Ring on final life with 0 rings left' },
+  { id: 'arcade_boss', name: 'Boss Slayer', desc: 'Clear an Arcade boss level (every 5th)' },
+  // All modes milestone (176-178)
+  { id: 'all_16_modes', name: 'Mode Legend', desc: 'Play all 16 game modes' },
+  { id: 'all_skins_21', name: 'Full Collection', desc: 'Unlock all 21 ring skins' },
+  { id: 'all_themes_12', name: 'Theme Legend', desc: 'Use all 12 arena themes' },
 ];
 
 const XP_TITLES = [
@@ -412,6 +449,8 @@ function defaultSave(): SaveData {
       ricochetBounceScores: 0, eliminationClears: 0,
       laserAims: 0, bounceRingers: 0,
       frenzyBonuses: 0, boardClears: 0,
+      duelsWon: 0, duelsPlayed: 0,
+      bestArcadeLevel: 0, arcadeGamesPlayed: 0,
     },
     settings: { masterVol: 0.8, sfxVol: 0.8, musicVol: 0.5, theme: 0, difficulty: 'medium' },
     skin: 0, xp: 0, level: 1,
@@ -956,6 +995,24 @@ async function main() {
       world.scene.add(g);
       pegMeshes.push({ mesh: g, def, glowMesh: glow });
     }
+
+    // Point value labels above pegs (using small emissive geometry "rings" to indicate value)
+    // We'll create small indicator dots above each peg showing its value tier
+    for (const pm of pegMeshes) {
+      const p = pm.def;
+      const isGolden = p.points >= 100;
+      const is50 = p.points >= 50;
+      const dotCount = isGolden ? 4 : is50 ? 3 : p.points >= 25 ? 2 : 1;
+      const dotColor = isGolden ? '#ffcc00' : is50 ? '#ff8800' : p.points >= 25 ? '#00ccff' : '#00ffff';
+      const dotGeo = new SphereGeometry(0.008, 4, 4);
+      for (let i = 0; i < dotCount; i++) {
+        const dotMat = new MeshBasicMaterial({ color: dotColor, transparent: true, opacity: 0.7, blending: AdditiveBlending });
+        const dot = new Mesh(dotGeo, dotMat);
+        const angle = (i / dotCount) * Math.PI * 2;
+        dot.position.set(Math.cos(angle) * 0.04, p.height + 0.06, Math.sin(angle) * 0.04);
+        pm.mesh.add(dot);
+      }
+    }
   }
   buildPegs();
 
@@ -1394,6 +1451,34 @@ async function main() {
   let currentLayout = 0;
   let layoutsPlayed = new Set<number>();
 
+  // Duel state
+  let duelRound = 1;
+  let duelMaxRounds = 3;
+  let duelPlayerScore = 0;
+  let duelAiScore = 0;
+  let duelPlayerRoundScores: number[] = [];
+  let duelAiRoundScores: number[] = [];
+  let duelIsPlayerTurn = true;
+  let duelAiRingsLeft = 0;
+  let duelAiTimer = 0;
+  let duelPlayerWins = 0;
+  let duelAiWins = 0;
+  let duelGoldenCount = 0;
+  let duelTrashedAfterR2 = false;
+
+  // Arcade state
+  let arcadeLevel = 1;
+  let arcadeLives = 3;
+  let arcadeLevelRings = 5;
+  let arcadeLevelHits = 0;
+  let arcadeLevelMisses = 0;
+  let arcadeBonusActive = false;
+  let arcadeBonusTimer = 0;
+  let arcadePerfectLevels = 0;
+  let arcadeConsecutiveRingers = 0;
+  let arcadeBonusTriggered = 0;
+  let arcadeExtraLivesEarned = 0;
+
   // ============================================================
   // POWER-UP SYSTEM
   // ============================================================
@@ -1582,6 +1667,18 @@ async function main() {
       if (zenGoldenCount >= 5) checkAchievement('zen_golden_5');
     }
 
+    // Duel: track golden pegs + bind score to player
+    if (gameMode === 'duel' && duelIsPlayerTurn) {
+      duelPlayerScore = gameScore;
+      if (peg.points >= 100) duelGoldenCount++;
+      updateDuelPanel();
+    }
+
+    // Arcade: track hits
+    if (gameMode === 'arcade') {
+      arcadeOnHit();
+    }
+
     // Effects
     const color = peg.points >= 100 ? '#ffcc00' : theme().accent;
     particles.emit(peg.x, peg.height, peg.z, 25, color, 2.5, 0.8);
@@ -1650,6 +1747,7 @@ async function main() {
     gameMisses++;
     gameCombo = 0;
     if (gameMode === 'marathon') { marathonWaveMisses++; marathonMissBefore++; marathonComeback = 0; }
+    if (gameMode === 'arcade') { arcadeOnMiss(); return; } // arcade handles its own miss flow
     audio.playSfx('miss');
     updateHUD();
   }
@@ -1835,6 +1933,38 @@ async function main() {
         elimPerfectClears = 0;
         elimFirstPegGolden = false;
         break;
+      case 'duel':
+        gameRingsLeft = 5; // per turn
+        gameTimeLeft = 0;
+        duelRound = 1;
+        duelMaxRounds = 3;
+        duelPlayerScore = 0;
+        duelAiScore = 0;
+        duelPlayerRoundScores = [];
+        duelAiRoundScores = [];
+        duelIsPlayerTurn = true;
+        duelAiRingsLeft = 0;
+        duelAiTimer = 0;
+        duelPlayerWins = 0;
+        duelAiWins = 0;
+        duelGoldenCount = 0;
+        duelTrashedAfterR2 = false;
+        break;
+      case 'arcade':
+        arcadeLevel = 1;
+        arcadeLives = 3;
+        arcadeLevelRings = 5;
+        arcadeLevelHits = 0;
+        arcadeLevelMisses = 0;
+        arcadeBonusActive = false;
+        arcadeBonusTimer = 0;
+        arcadePerfectLevels = 0;
+        arcadeConsecutiveRingers = 0;
+        arcadeBonusTriggered = 0;
+        arcadeExtraLivesEarned = 0;
+        gameRingsLeft = 5;
+        gameTimeLeft = 0;
+        break;
       case 'custom':
         gameRingsLeft = save.customSettings.rings;
         gameTimeLeft = save.customSettings.time;
@@ -1878,6 +2008,7 @@ async function main() {
       if (save.stats.modesPlayed.length >= 8) checkAchievement('all_modes');
       if (save.stats.modesPlayed.length >= 12) checkAchievement('all_12_modes');
       if (save.stats.modesPlayed.length >= 14) checkAchievement('all_12_modes');
+      if (save.stats.modesPlayed.length >= 16) checkAchievement('all_16_modes');
     }
 
     const skinName = RING_SKINS[save.skin].name;
@@ -1891,6 +2022,7 @@ async function main() {
       save.stats.themesUsed.push(themeName);
       if (save.stats.themesUsed.length >= 5) checkAchievement('theme_all');
       if (save.stats.themesUsed.length >= 10) checkAchievement('all_themes_10');
+      if (save.stats.themesUsed.length >= 12) checkAchievement('all_themes_12');
     }
 
     // Track total rings milestone
@@ -2055,7 +2187,10 @@ async function main() {
 
     // Skin unlock checks
     const unlockedSkins = RING_SKINS.filter(s => s.condition(save)).length;
-    if (unlockedSkins >= RING_SKINS.length) checkAchievement('all_skins');
+    if (unlockedSkins >= RING_SKINS.length) checkAchievement('all_skins_21');
+
+    // Theme checks
+    if (save.stats.themesUsed.length >= 12) checkAchievement('all_themes_12');
 
     // Daily
     if (gameMode === 'daily') {
@@ -2068,6 +2203,44 @@ async function main() {
         if (save.dailyStreak >= 7) checkAchievement('daily_7');
       }
       checkAchievement('daily_done');
+    }
+
+    // Duel mode end handling
+    if (gameMode === 'duel') {
+      save.stats.duelsPlayed++;
+      checkAchievement('duel_first');
+      if (duelPlayerScore > duelAiScore) {
+        save.stats.duelsWon++;
+        checkAchievement('duel_win');
+        if (save.stats.duelsWon >= 3) checkAchievement('duel_win_3');
+        if (save.stats.duelsWon >= 10) checkAchievement('duel_win_10');
+        if (duelPlayerWins === duelMaxRounds) checkAchievement('duel_sweep');
+        if (duelTrashedAfterR2) checkAchievement('duel_comeback');
+        // Check domination
+        for (let ri = 0; ri < duelPlayerRoundScores.length; ri++) {
+          if (duelPlayerRoundScores[ri] - duelAiRoundScores[ri] >= 500) {
+            checkAchievement('duel_dominate');
+            break;
+          }
+        }
+      }
+      if (accuracy >= 1.0 && gameRingsThrown >= 5) checkAchievement('duel_perfect');
+      if (duelGoldenCount >= 3) checkAchievement('duel_golden_3');
+      if (duelPlayerScore >= 2000) checkAchievement('duel_score_2k');
+    }
+
+    // Arcade mode end handling
+    if (gameMode === 'arcade') {
+      save.stats.arcadeGamesPlayed++;
+      if (arcadeLevel > save.stats.bestArcadeLevel) save.stats.bestArcadeLevel = arcadeLevel;
+      checkAchievement('arcade_first');
+      if (arcadeLevel >= 5) checkAchievement('arcade_lv5');
+      if (arcadeLevel >= 10) checkAchievement('arcade_lv10');
+      if (arcadeLevel >= 20) checkAchievement('arcade_lv20');
+      if (save.stats.arcadeGamesPlayed >= 5) checkAchievement('arcade_5_games');
+      if (gameScore >= 5000) checkAchievement('arcade_score_5k');
+      if (gameScore >= 10000) checkAchievement('arcade_score_10k');
+      if (arcadeBonusTriggered >= 3) checkAchievement('arcade_all_bonus');
     }
 
     // Leaderboard & history
@@ -2148,6 +2321,8 @@ async function main() {
   const waveEntity = createFollowerPanel('/ui/wave.json', -0.3, 0.05, -0.5, 0.2, 0.1);
   const challengeEntity = createWorldPanel('/ui/challenge.json', 0, 1.6, -2.5, 0.9, 1.2);
   const historyEntity = createWorldPanel('/ui/history.json', 0, 1.6, -2.5, 1.0, 1.2);
+  const duelEntity = createFollowerPanel('/ui/duel.json', -0.32, 0.1, -0.5, 0.35, 0.2);
+  const arcadeEntity = createFollowerPanel('/ui/arcade.json', -0.32, 0.1, -0.5, 0.3, 0.1);
 
   function hideAllPanels() {
     panelEntities.forEach(e => hidePanel(e));
@@ -2201,6 +2376,22 @@ async function main() {
     } else {
       hidePanel(waveEntity);
     }
+
+    // Duel panel
+    if (gameMode === 'duel') {
+      updateDuelPanel();
+      showPanel(duelEntity);
+    } else {
+      hidePanel(duelEntity);
+    }
+
+    // Arcade panel
+    if (gameMode === 'arcade') {
+      updateArcadePanel();
+      showPanel(arcadeEntity);
+    } else {
+      hidePanel(arcadeEntity);
+    }
   }
 
   // ============================================================
@@ -2234,7 +2425,7 @@ async function main() {
     bind(titleEntity, 'btn-history', () => { audio.playSfx('click'); gameState = 'history'; refreshHistory(); hideAllPanels(); showPanel(historyEntity); });
 
     // Mode select - all 12 modes + custom
-    const modes: GameMode[] = ['classic', 'speed', 'target', 'distance', 'trick', 'daily', 'survival', 'practice', 'marathon', 'precision', 'carnival', 'zen', 'ricochet', 'elimination'];
+    const modes: GameMode[] = ['classic', 'speed', 'target', 'distance', 'trick', 'daily', 'survival', 'practice', 'marathon', 'precision', 'carnival', 'zen', 'ricochet', 'elimination', 'duel', 'arcade'];
     modes.forEach(m => {
       bind(modeEntity, 'btn-' + m, () => { audio.playSfx('click'); gameMode = m; gameState = 'difficulty'; hideAllPanels(); showPanel(diffEntity); });
     });
@@ -2462,6 +2653,185 @@ async function main() {
 
 
   // ============================================================
+  // DUEL AI LOGIC
+  // ============================================================
+
+  function duelAiThrow() {
+    // AI has variable accuracy based on difficulty
+    const aiAccuracy = gameDifficulty === 'easy' ? 0.4 : gameDifficulty === 'medium' ? 0.6 : 0.8;
+    const aimBias = (Math.random() - 0.5) * (1 - aiAccuracy) * 2; // worse AI = more random aim
+    const power = 0.3 + Math.random() * 0.5;
+    throwRing(power, aimBias, 0, {});
+  }
+
+  function duelEndRound() {
+    // End player turn, run AI round
+    duelPlayerRoundScores.push(gameScore - (duelPlayerRoundScores.reduce((a, b) => a + b, 0) || 0));
+    duelIsPlayerTurn = false;
+    duelAiRingsLeft = 5;
+    duelAiTimer = 0;
+    showToast('CPU TURN...');
+    updateDuelPanel();
+  }
+
+  function duelAiUpdate(dt: number) {
+    if (!duelIsPlayerTurn && gameState === 'playing' && duelAiRingsLeft > 0) {
+      duelAiTimer += dt;
+      if (duelAiTimer >= 1.5) { // AI throws every 1.5 seconds
+        duelAiTimer = 0;
+        duelAiRingsLeft--;
+        duelAiThrow();
+        // Simulate AI scoring (simplified)
+        const aiAccuracy = gameDifficulty === 'easy' ? 0.35 : gameDifficulty === 'medium' ? 0.55 : 0.75;
+        if (Math.random() < aiAccuracy) {
+          const pegIdx = Math.floor(Math.random() * activePegs.length);
+          const peg = activePegs[pegIdx];
+          const pts = peg.points * (1 + Math.floor(Math.random() * 3)); // some combo chance
+          duelAiScore += pts;
+        }
+        updateDuelPanel();
+
+        if (duelAiRingsLeft <= 0) {
+          // AI round done
+          duelAiRoundScores.push(duelAiScore - (duelAiRoundScores.reduce((a, b) => a + b, 0) || 0));
+          const prs = duelPlayerRoundScores[duelPlayerRoundScores.length - 1] || 0;
+          const ars = duelAiRoundScores[duelAiRoundScores.length - 1] || 0;
+          if (prs > ars) duelPlayerWins++;
+          else if (ars > prs) duelAiWins++;
+
+          // Check if trailing after round 2
+          if (duelRound === 2 && duelAiScore > duelPlayerScore) duelTrashedAfterR2 = true;
+
+          if (duelRound >= duelMaxRounds) {
+            // End duel
+            endGame();
+            return;
+          }
+
+          duelRound++;
+          duelIsPlayerTurn = true;
+          gameRingsLeft = 5;
+          gameRingsThrown = 0; // reset ring count for new round
+          showToast('ROUND ' + duelRound + ' - YOUR TURN');
+          updateDuelPanel();
+        }
+      }
+    }
+  }
+
+  function updateDuelPanel() {
+    updatePanel(duelEntity, 'duel-p-score', String(duelPlayerScore));
+    updatePanel(duelEntity, 'duel-ai-score', String(duelAiScore));
+    updatePanel(duelEntity, 'duel-round', 'Round ' + duelRound + ' of ' + duelMaxRounds);
+    updatePanel(duelEntity, 'duel-turn', duelIsPlayerTurn ? 'YOUR TURN' : 'CPU TURN');
+    updatePanel(duelEntity, 'duel-rings', 'Rings: ' + (duelIsPlayerTurn ? gameRingsLeft : duelAiRingsLeft));
+  }
+
+  // ============================================================
+  // ARCADE LEVEL LOGIC
+  // ============================================================
+
+  function arcadeNextLevel() {
+    // Check for perfect level
+    if (arcadeLevelMisses === 0 && arcadeLevelHits > 0) {
+      arcadePerfectLevels++;
+      checkAchievement('arcade_no_miss_lv');
+      if (arcadePerfectLevels >= 3) checkAchievement('arcade_3_perfect');
+    }
+
+    // Boss level every 5th
+    if (arcadeLevel % 5 === 0) {
+      checkAchievement('arcade_boss');
+      showToast('BOSS CLEARED!');
+      // Extra rings for boss victory
+      gameRingsLeft += 3;
+    }
+
+    arcadeLevel++;
+    arcadeLevelRings = Math.max(3, 5 + Math.floor(arcadeLevel / 2));
+    gameRingsLeft = arcadeLevelRings;
+    arcadeLevelHits = 0;
+    arcadeLevelMisses = 0;
+    gameRingsThrown = 0;
+
+    // Extra life every 5 levels
+    if (arcadeLevel % 5 === 0 && arcadeLives < 5) {
+      arcadeLives++;
+      arcadeExtraLivesEarned++;
+      checkAchievement('arcade_1up');
+      showToast('EXTRA LIFE! ♥');
+    }
+
+    // Bonus round chance every 3 levels
+    if (arcadeLevel % 3 === 0 && !arcadeBonusActive) {
+      arcadeBonusActive = true;
+      arcadeBonusTimer = 10;
+      arcadeBonusTriggered++;
+      checkAchievement('arcade_bonus');
+      showToast('BONUS ROUND! 2x ALL!');
+      audio.playSfx('wave');
+    }
+
+    // Increase difficulty: more wind, moving pegs at higher levels
+    if (arcadeLevel >= 5) {
+      windEnabled = true;
+      updateWind();
+    }
+    if (arcadeLevel >= 10 && arcadeLevel % 3 === 0) {
+      // Some pegs start moving
+      activePegs = activePegs.map(p => {
+        if (Math.random() < 0.3) {
+          return { ...p, moving: true, baseX: p.x, moveAmplitude: 0.1, moveSpeed: 0.5 + arcadeLevel * 0.05, movePhase: Math.random() * Math.PI * 2 };
+        }
+        return p;
+      });
+      buildPegs();
+    }
+
+    // Update arcade HUD
+    updateArcadePanel();
+    showToast('LEVEL ' + arcadeLevel);
+    audio.playSfx('levelup');
+  }
+
+  function arcadeOnHit() {
+    arcadeLevelHits++;
+    arcadeConsecutiveRingers++;
+    if (arcadeConsecutiveRingers >= 10) checkAchievement('arcade_streak_10');
+
+    // Arcade bonus: 2x scoring
+    if (arcadeBonusActive) {
+      const bonus = Math.floor(gameScore * 0.1); // extra 10% during bonus
+      gameScore += bonus;
+    }
+  }
+
+  function arcadeOnMiss() {
+    arcadeLevelMisses++;
+    arcadeConsecutiveRingers = 0;
+    arcadeLives--;
+
+    // Last chance achievement
+    if (arcadeLives === 0 && gameRingsLeft === 0) {
+      // Will trigger on next ringer if they somehow get one
+    }
+
+    updateArcadePanel();
+
+    if (arcadeLives <= 0) {
+      endGame();
+    }
+  }
+
+  function updateArcadePanel() {
+    updatePanel(arcadeEntity, 'arc-level', String(arcadeLevel));
+    let hearts = '';
+    for (let i = 0; i < arcadeLives; i++) hearts += '♥';
+    updatePanel(arcadeEntity, 'arc-lives', hearts || 'X');
+    updatePanel(arcadeEntity, 'arc-bonus', arcadeBonusActive ? Math.ceil(arcadeBonusTimer) + 's' : '--');
+  }
+
+  // ============================================================
   // INPUT
   // ============================================================
 
@@ -2469,6 +2839,7 @@ async function main() {
 
   function doThrow() {
     if (gameRingsLeft <= 0 && gameRingsLeft < 900) return;
+    if (gameMode === 'duel' && !duelIsPlayerTurn) return; // Can't throw during AI turn
 
     const flags: { magnet?: boolean; ghost?: boolean; giant?: boolean; fire?: boolean; offsetX?: number; bounce?: boolean } = {};
 
@@ -2781,10 +3152,32 @@ async function main() {
               endGame();
               return;
             }
+          } else if (gameMode === 'duel' && duelIsPlayerTurn) {
+            // End player's round, start AI
+            duelEndRound();
+          } else if (gameMode === 'arcade') {
+            // Advance to next level
+            arcadeNextLevel();
           } else {
             endGame();
             return;
           }
+        }
+      }
+
+      // Duel AI update
+      if (gameMode === 'duel') {
+        duelAiUpdate(dt);
+      }
+
+      // Arcade bonus timer
+      if (gameMode === 'arcade' && arcadeBonusActive) {
+        arcadeBonusTimer -= dt;
+        updateArcadePanel();
+        if (arcadeBonusTimer <= 0) {
+          arcadeBonusActive = false;
+          showToast('Bonus ended');
+          updateArcadePanel();
         }
       }
 
