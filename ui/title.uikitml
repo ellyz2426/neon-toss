@@ -22,7 +22,8 @@
   </div>
   <div class="btn-row">
     <div id="btn-history" class="btn">HISTORY</div>
-    <div id="btn-settings" class="btn">SETTINGS</div>
+    <div id="btn-records" class="btn">RECORDS</div>
   </div>
+  <div id="btn-settings" class="btn">SETTINGS</div>
   <div id="btn-help" class="btn">HELP</div>
 </div>

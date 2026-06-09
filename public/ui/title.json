@@ -137,10 +137,10 @@
             "type": "container",
             "sourceTag": "div",
             "children": [
-              "SETTINGS"
+              "RECORDS"
             ],
             "properties": {
-              "id": "btn-settings",
+              "id": "btn-records",
               "class": "btn"
             },
             "dataUid": "uid-14"
@@ -155,13 +155,25 @@
         "type": "container",
         "sourceTag": "div",
         "children": [
+          "SETTINGS"
+        ],
+        "properties": {
+          "id": "btn-settings",
+          "class": "btn"
+        },
+        "dataUid": "uid-15"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
           "HELP"
         ],
         "properties": {
           "id": "btn-help",
           "class": "btn"
         },
-        "dataUid": "uid-15"
+        "dataUid": "uid-16"
       }
     ],
     "properties": {
@@ -292,7 +304,7 @@
         "column": 0
       },
       "end": {
-        "line": 27,
+        "line": 28,
         "column": 6
       }
     },
@@ -423,7 +435,7 @@
       },
       "end": {
         "line": 24,
-        "column": 53
+        "column": 51
       }
     },
     "uid-15": {
@@ -433,6 +445,16 @@
       },
       "end": {
         "line": 26,
+        "column": 51
+      }
+    },
+    "uid-16": {
+      "start": {
+        "line": 27,
+        "column": 2
+      },
+      "end": {
+        "line": 27,
         "column": 43
       }
     }

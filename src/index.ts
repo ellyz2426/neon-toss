@@ -17,11 +17,11 @@ import {
 
 type GameState = 'title' | 'modeSelect' | 'difficulty' | 'playing' | 'paused' |
   'gameOver' | 'leaderboard' | 'achievements' | 'settings' | 'stats' |
-  'skins' | 'help' | 'countdown' | 'history' | 'challenge';
+  'skins' | 'help' | 'countdown' | 'history' | 'challenge' | 'records';
 
 type GameMode = 'classic' | 'speed' | 'target' | 'distance' | 'trick' | 'daily' |
   'survival' | 'practice' | 'marathon' | 'precision' | 'carnival' | 'zen' |
-  'ricochet' | 'elimination' | 'duel' | 'arcade' | 'custom';
+  'ricochet' | 'elimination' | 'duel' | 'arcade' | 'tournament' | 'custom';
 type Difficulty = 'easy' | 'medium' | 'hard';
 type PowerUpType = 'multi' | 'magnet' | 'fire' | 'giant' | 'ghost' | 'slowmo' | 'laser' | 'bounce';
 
@@ -83,6 +83,10 @@ interface SaveData {
     frenzyBonuses: number; boardClears: number;
     duelsWon: number; duelsPlayed: number;
     bestArcadeLevel: number; arcadeGamesPlayed: number;
+    tournamentsWon: number; tournamentsPlayed: number;
+    bestTournamentStage: number;
+    verticalShotsLanded: number;
+    modeBests: Record<string, number>;
   };
   settings: {
     masterVol: number; sfxVol: number; musicVol: number;
@@ -174,6 +178,8 @@ const THEMES: Theme[] = [
   { name: 'Ice Palace', grid: '#88ccff', accent: '#aaddff', bg: '#080c14', fog: '#080c14', wall: '#0a1525', peg: '#6699cc', ring: '#88ccff', glow: '#aaddff' },
   { name: 'Midnight Gold', grid: '#cc9933', accent: '#ddaa44', bg: '#0a0800', fog: '#0a0800', wall: '#1a1000', peg: '#aa7722', ring: '#cc9933', glow: '#ddaa44' },
   { name: 'Neon Frost', grid: '#66eeff', accent: '#88ffff', bg: '#060e10', fog: '#060e10', wall: '#0a1a1e', peg: '#44bbcc', ring: '#66eeff', glow: '#88ffff' },
+  { name: 'Void Black', grid: '#555577', accent: '#8888aa', bg: '#020204', fog: '#020204', wall: '#0a0a12', peg: '#666688', ring: '#8888aa', glow: '#9999bb' },
+  { name: 'Neon Lime', grid: '#aaff00', accent: '#ccff33', bg: '#080a00', fog: '#080a00', wall: '#121a00', peg: '#88cc00', ring: '#aaff00', glow: '#ccff33' },
 ];
 
 const RING_SKINS: RingSkin[] = [
@@ -198,6 +204,11 @@ const RING_SKINS: RingSkin[] = [
   { name: 'Aurora', color: '#44ffaa', emissive: '#22cc77', glow: '#66ffcc', unlock: 'All 16 modes', condition: s => s.stats.modesPlayed.length >= 16 },
   { name: 'Ember', color: '#ff6622', emissive: '#cc4411', glow: '#ff8844', unlock: 'Win 3 duels', condition: s => s.stats.duelsWon >= 3 },
   { name: 'Starlight', color: '#eeeeff', emissive: '#ccccee', glow: '#ffffff', unlock: 'Arcade level 10', condition: s => s.stats.bestArcadeLevel >= 10 },
+  { name: 'Crimson', color: '#cc0033', emissive: '#880022', glow: '#ff1144', unlock: 'Win a tournament', condition: s => s.stats.tournamentsWon >= 1 },
+  { name: 'Prism', color: '#ff88ff', emissive: '#cc55cc', glow: '#ffaaff', unlock: '25 vertical shots', condition: s => s.stats.verticalShotsLanded >= 25 },
+  { name: 'Titanium', color: '#99aacc', emissive: '#667799', glow: '#bbccee', unlock: 'Level 40', condition: s => s.level >= 40 },
+  { name: 'Jade', color: '#33cc77', emissive: '#228855', glow: '#55ee99', unlock: '15 mode records', condition: s => Object.keys(s.stats.modeBests || {}).length >= 15 },
+  { name: 'Plasma Arc', color: '#33ccff', emissive: '#2299cc', glow: '#55eeff', unlock: '50 games played', condition: s => s.stats.gamesPlayed >= 50 },
 ];
 
 const POWER_UP_DEFS: PowerUpDef[] = [
@@ -210,6 +221,20 @@ const POWER_UP_DEFS: PowerUpDef[] = [
   { type: 'laser', name: 'LASER AIM', desc: 'Perfect aim guide for 8 seconds', color: '#ff0000', duration: 8 },
   { type: 'bounce', name: 'BOUNCE RING', desc: 'Ring bounces extra to hit more pegs', color: '#ff88ff', duration: 0 },
 ];
+
+// Tournament AI opponents (8-player bracket)
+interface TournOpponent { name: string; accuracy: number; color: string; title: string; }
+const TOURN_OPPONENTS: TournOpponent[] = [
+  { name: 'ROOKIE', accuracy: 0.25, color: '#66ff66', title: 'Quarter-Final' },
+  { name: 'SLIDER', accuracy: 0.35, color: '#88ddff', title: 'Quarter-Final' },
+  { name: 'ACE', accuracy: 0.45, color: '#ffcc00', title: 'Semi-Final' },
+  { name: 'VIPER', accuracy: 0.55, color: '#ff6600', title: 'Semi-Final' },
+  { name: 'BLAZE', accuracy: 0.65, color: '#ff3344', title: 'Final' },
+  { name: 'PHANTOM', accuracy: 0.72, color: '#aa33ff', title: 'Final' },
+  { name: 'TITAN', accuracy: 0.80, color: '#ff0088', title: 'Championship' },
+  { name: 'APEX', accuracy: 0.88, color: '#ffffff', title: 'Grand Final' },
+];
+const TOURN_STAGES = ['Quarter-Final', 'Semi-Final', 'Final', 'Championship'];
 
 const ACHIEVEMENTS: Achievement[] = [
   // Original 40
@@ -417,6 +442,25 @@ const TRICK_SHOTS = [
   { id: 'far_golden', name: 'Golden Snipe', desc: 'Ring the golden peg from back' },
   { id: 'double', name: 'Double Ring', desc: 'Ring 2 pegs in one toss' },
   { id: 'triple_row', name: 'Row Clear', desc: 'Ring all pegs in one row during a game' },
+  // Tournament achievements
+  { id: 'tourn_enter', name: 'Contender', desc: 'Enter your first tournament' },
+  { id: 'tourn_qf', name: 'Past Quarters', desc: 'Win a Quarter-Final match' },
+  { id: 'tourn_sf', name: 'Semi-Finalist', desc: 'Win a Semi-Final match' },
+  { id: 'tourn_final', name: 'Finalist', desc: 'Win a Final match' },
+  { id: 'tourn_champ', name: 'CHAMPION!', desc: 'Win the Championship' },
+  { id: 'tourn_sweep', name: 'Clean Sweep', desc: 'Win every round in a tournament match' },
+  { id: 'tourn_comeback', name: 'Comeback King', desc: 'Win a tournament match after losing a round' },
+  { id: 'tourn_3_wins', name: 'Tournament Pro', desc: 'Win 3 tournaments' },
+  { id: 'tourn_5_wins', name: 'Tournament Legend', desc: 'Win 5 tournaments' },
+  { id: 'tourn_golden_3', name: 'Gold Rush', desc: 'Ring 3 golden pegs in a tournament match' },
+  { id: 'tourn_perfect_round', name: 'Perfect Round', desc: '100% accuracy in a tournament round' },
+  { id: 'tourn_beat_apex', name: 'Apex Predator', desc: 'Defeat APEX in the Grand Final' },
+  { id: 'tourn_no_loss', name: 'Undefeated', desc: 'Win an entire tournament without losing a round' },
+  { id: 'tourn_score_5k', name: 'Tournament Star', desc: 'Score 5,000+ in a single tournament match' },
+  // Vertical shot achievements
+  { id: 'vertical_first', name: 'Sky High', desc: 'Land a high-arc vertical shot' },
+  { id: 'vertical_10', name: 'Arc Master', desc: 'Land 10 vertical shots' },
+  { id: 'vertical_25', name: 'Rainbow Tosser', desc: 'Land 25 vertical shots' },
 ];
 
 const WIND_LABELS = ['Calm', 'Light', 'Moderate', 'Strong', 'Gale'];
@@ -451,6 +495,9 @@ function defaultSave(): SaveData {
       frenzyBonuses: 0, boardClears: 0,
       duelsWon: 0, duelsPlayed: 0,
       bestArcadeLevel: 0, arcadeGamesPlayed: 0,
+      tournamentsWon: 0, tournamentsPlayed: 0,
+      bestTournamentStage: 0, verticalShotsLanded: 0,
+      modeBests: {},
     },
     settings: { masterVol: 0.8, sfxVol: 0.8, musicVol: 0.5, theme: 0, difficulty: 'medium' },
     skin: 0, xp: 0, level: 1,
@@ -1479,6 +1526,24 @@ async function main() {
   let arcadeBonusTriggered = 0;
   let arcadeExtraLivesEarned = 0;
 
+  // Tournament state
+  let tournStage = 0; // 0..3 = QF, SF, F, Championship
+  let tournRound = 1;
+  let tournMaxRounds = 3;
+  let tournPlayerScore = 0;
+  let tournAiScore = 0;
+  let tournPlayerRoundScores: number[] = [];
+  let tournAiRoundScores: number[] = [];
+  let tournIsPlayerTurn = true;
+  let tournAiRingsLeft = 0;
+  let tournAiTimer = 0;
+  let tournPlayerWins = 0;
+  let tournAiWins = 0;
+  let tournGoldenCount = 0;
+  let tournLostAnyRound = false;
+  let tournMatchesWon = 0; // wins within this tournament run
+  let tournPerfectRounds = 0;
+
   // ============================================================
   // POWER-UP SYSTEM
   // ============================================================
@@ -1672,6 +1737,13 @@ async function main() {
       duelPlayerScore = gameScore;
       if (peg.points >= 100) duelGoldenCount++;
       updateDuelPanel();
+    }
+
+    // Tournament: track player score
+    if (gameMode === 'tournament' && tournIsPlayerTurn) {
+      tournPlayerScore = gameScore;
+      if (peg.points >= 100) tournGoldenCount++;
+      updateTournPanel();
     }
 
     // Arcade: track hits
@@ -1965,6 +2037,29 @@ async function main() {
         gameRingsLeft = 5;
         gameTimeLeft = 0;
         break;
+      case 'tournament':
+        gameRingsLeft = 5; // per round
+        gameTimeLeft = 0;
+        tournStage = 0;
+        tournRound = 1;
+        tournMaxRounds = 3;
+        tournPlayerScore = 0;
+        tournAiScore = 0;
+        tournPlayerRoundScores = [];
+        tournAiRoundScores = [];
+        tournIsPlayerTurn = true;
+        tournAiRingsLeft = 0;
+        tournAiTimer = 0;
+        tournPlayerWins = 0;
+        tournAiWins = 0;
+        tournGoldenCount = 0;
+        tournLostAnyRound = false;
+        tournMatchesWon = 0;
+        tournPerfectRounds = 0;
+        windEnabled = gameDifficulty !== 'easy';
+        if (windEnabled) updateWind();
+        checkAchievement('tourn_enter');
+        break;
       case 'custom':
         gameRingsLeft = save.customSettings.rings;
         gameTimeLeft = save.customSettings.time;
@@ -2243,6 +2338,27 @@ async function main() {
       if (arcadeBonusTriggered >= 3) checkAchievement('arcade_all_bonus');
     }
 
+    // Tournament mode end handling
+    if (gameMode === 'tournament') {
+      save.stats.tournamentsPlayed++;
+      if (tournStage > save.stats.bestTournamentStage) save.stats.bestTournamentStage = tournStage;
+    }
+
+    // Track mode bests
+    if (!save.stats.modeBests) save.stats.modeBests = {};
+    const prevBest = save.stats.modeBests[gameMode];
+    if (prevBest === undefined || gameScore > prevBest) {
+      save.stats.modeBests[gameMode] = gameScore;
+    }
+
+    // Track vertical shots
+    if (chargePower >= 0.9) {
+      save.stats.verticalShotsLanded++;
+      checkAchievement('vertical_first');
+      if (save.stats.verticalShotsLanded >= 10) checkAchievement('vertical_10');
+      if (save.stats.verticalShotsLanded >= 25) checkAchievement('vertical_25');
+    }
+
     // Leaderboard & history
     const entry: LeaderEntry = {
       score: gameScore, mode: gameMode, difficulty: gameDifficulty,
@@ -2323,6 +2439,8 @@ async function main() {
   const historyEntity = createWorldPanel('/ui/history.json', 0, 1.6, -2.5, 1.0, 1.2);
   const duelEntity = createFollowerPanel('/ui/duel.json', -0.32, 0.1, -0.5, 0.35, 0.2);
   const arcadeEntity = createFollowerPanel('/ui/arcade.json', -0.32, 0.1, -0.5, 0.3, 0.1);
+  const tournEntity = createFollowerPanel('/ui/tournament.json', -0.32, 0.1, -0.5, 0.4, 0.25);
+  const recordsEntity = createWorldPanel('/ui/records.json', 0, 1.6, -2.5, 0.9, 1.4);
 
   function hideAllPanels() {
     panelEntities.forEach(e => hidePanel(e));
@@ -2392,6 +2510,23 @@ async function main() {
     } else {
       hidePanel(arcadeEntity);
     }
+
+    // Tournament panel
+    if (gameMode === 'tournament') {
+      updateTournPanel();
+      showPanel(tournEntity);
+    } else {
+      hidePanel(tournEntity);
+    }
+
+    // Wind indicator
+    if (windEnabled) {
+      updatePanel(windEntity, 'wind-dir', getWindArrow());
+      updatePanel(windEntity, 'wind-str', WIND_LABELS[windStrength]);
+      showPanel(windEntity);
+    } else {
+      hidePanel(windEntity);
+    }
   }
 
   // ============================================================
@@ -2423,9 +2558,10 @@ async function main() {
     bind(titleEntity, 'btn-settings', () => { audio.playSfx('click'); gameState = 'settings'; hideAllPanels(); showPanel(settingsEntity); });
     bind(titleEntity, 'btn-help', () => { audio.playSfx('click'); gameState = 'help'; hideAllPanels(); showPanel(helpEntity); });
     bind(titleEntity, 'btn-history', () => { audio.playSfx('click'); gameState = 'history'; refreshHistory(); hideAllPanels(); showPanel(historyEntity); });
+    bind(titleEntity, 'btn-records', () => { audio.playSfx('click'); gameState = 'records'; refreshRecords(); hideAllPanels(); showPanel(recordsEntity); });
 
     // Mode select - all 12 modes + custom
-    const modes: GameMode[] = ['classic', 'speed', 'target', 'distance', 'trick', 'daily', 'survival', 'practice', 'marathon', 'precision', 'carnival', 'zen', 'ricochet', 'elimination', 'duel', 'arcade'];
+    const modes: GameMode[] = ['classic', 'speed', 'target', 'distance', 'trick', 'daily', 'survival', 'practice', 'marathon', 'precision', 'carnival', 'zen', 'ricochet', 'elimination', 'duel', 'arcade', 'tournament'];
     modes.forEach(m => {
       bind(modeEntity, 'btn-' + m, () => { audio.playSfx('click'); gameMode = m; gameState = 'difficulty'; hideAllPanels(); showPanel(diffEntity); });
     });
@@ -2462,6 +2598,7 @@ async function main() {
       { ent: modeEntity, btn: 'btn-mode-back' },
       { ent: historyEntity, btn: 'btn-hi-back' },
       { ent: challengeEntity, btn: 'btn-ch-back' },
+      { ent: recordsEntity, btn: 'btn-rec-back' },
     ];
     backPanels.forEach(({ ent, btn }) => {
       bind(ent, btn, () => { audio.playSfx('click'); goToTitle(); });
@@ -2632,6 +2769,15 @@ async function main() {
     updatePanel(challengeEntity, 'ch-rings', String(customRings));
     updatePanel(challengeEntity, 'ch-time', customTime > 0 ? customTime + 's' : 'OFF');
     updatePanel(challengeEntity, 'ch-wind', customWind > 0 ? WIND_LABELS[customWind] : 'OFF');
+  }
+
+  function refreshRecords() {
+    const allModes = ['classic', 'speed', 'target', 'distance', 'trick', 'daily', 'survival',
+      'marathon', 'precision', 'carnival', 'ricochet', 'elimination', 'duel', 'arcade', 'tournament'];
+    for (const m of allModes) {
+      const best = save.stats.modeBests[m];
+      updatePanel(recordsEntity, 'rec-' + m, best !== undefined ? String(best) : '--');
+    }
   }
 
   function applyTheme() {
@@ -2832,6 +2978,148 @@ async function main() {
   }
 
   // ============================================================
+  // TOURNAMENT LOGIC
+  // ============================================================
+
+  function tournCurrentOpponent(): TournOpponent {
+    return TOURN_OPPONENTS[Math.min(tournStage, TOURN_OPPONENTS.length - 1)];
+  }
+
+  function tournAiThrow() {
+    const opp = tournCurrentOpponent();
+    const aimBias = (Math.random() - 0.5) * (1 - opp.accuracy) * 2;
+    const power = 0.3 + Math.random() * 0.5;
+    throwRing(power, aimBias, 0, {});
+  }
+
+  function tournEndPlayerRound() {
+    tournPlayerRoundScores.push(gameScore - (tournPlayerRoundScores.reduce((a, b) => a + b, 0) || 0));
+    tournIsPlayerTurn = false;
+    tournAiRingsLeft = 5;
+    tournAiTimer = 0;
+    showToast('OPPONENT\'S TURN...');
+    updateTournPanel();
+  }
+
+  function tournAiUpdate(dt: number) {
+    if (!tournIsPlayerTurn && gameState === 'playing' && tournAiRingsLeft > 0) {
+      tournAiTimer += dt;
+      if (tournAiTimer >= 1.2) {
+        tournAiTimer = 0;
+        tournAiRingsLeft--;
+        tournAiThrow();
+        const opp = tournCurrentOpponent();
+        if (Math.random() < opp.accuracy) {
+          const pegIdx = Math.floor(Math.random() * activePegs.length);
+          const peg = activePegs[pegIdx];
+          const pts = peg.points * (1 + Math.floor(Math.random() * 3));
+          tournAiScore += pts;
+        }
+        updateTournPanel();
+
+        if (tournAiRingsLeft <= 0) {
+          tournAiRoundScores.push(tournAiScore - (tournAiRoundScores.reduce((a, b) => a + b, 0) || 0));
+          const prs = tournPlayerRoundScores[tournPlayerRoundScores.length - 1] || 0;
+          const ars = tournAiRoundScores[tournAiRoundScores.length - 1] || 0;
+          if (prs > ars) {
+            tournPlayerWins++;
+            // Track perfect rounds (100% accuracy)
+            const ringsThisRound = 5;
+            const hitsThisRound = prs > 0 ? Math.min(ringsThisRound, gameHits) : 0;
+            if (hitsThisRound === ringsThisRound) tournPerfectRounds++;
+          }
+          else if (ars > prs) { tournAiWins++; tournLostAnyRound = true; }
+
+          if (tournRound >= tournMaxRounds || tournPlayerWins > Math.floor(tournMaxRounds / 2) || tournAiWins > Math.floor(tournMaxRounds / 2)) {
+            // Match decided
+            if (tournPlayerScore > tournAiScore || tournPlayerWins > tournAiWins) {
+              // Player wins match
+              tournMatchesWon++;
+              const stageNames = ['tourn_qf', 'tourn_sf', 'tourn_final', 'tourn_champ'];
+              if (tournStage < stageNames.length) checkAchievement(stageNames[tournStage]);
+              if (tournPlayerWins === tournMaxRounds && !tournLostAnyRound) checkAchievement('tourn_sweep');
+              if (tournLostAnyRound) checkAchievement('tourn_comeback');
+              if (tournPerfectRounds > 0) checkAchievement('tourn_perfect_round');
+              if (tournGoldenCount >= 3) checkAchievement('tourn_golden_3');
+              if (gameScore >= 5000) checkAchievement('tourn_score_5k');
+
+              if (tournStage >= 3) {
+                // Won championship!
+                checkAchievement('tourn_champ');
+                if (tournCurrentOpponent().name === 'APEX') checkAchievement('tourn_beat_apex');
+                if (!tournLostAnyRound) checkAchievement('tourn_no_loss');
+                save.stats.tournamentsWon++;
+                if (save.stats.tournamentsWon >= 3) checkAchievement('tourn_3_wins');
+                if (save.stats.tournamentsWon >= 5) checkAchievement('tourn_5_wins');
+                showToast('TOURNAMENT CHAMPION!');
+                audio.playSfx('achievement');
+                particles.emit(0, 2, -3, 60, '#ffcc00', 5, 1.5);
+                endGame();
+              } else {
+                // Advance to next stage
+                tournStage++;
+                tournRound = 1;
+                tournPlayerScore = 0;
+                tournAiScore = 0;
+                tournPlayerRoundScores = [];
+                tournAiRoundScores = [];
+                tournPlayerWins = 0;
+                tournAiWins = 0;
+                tournIsPlayerTurn = true;
+                tournGoldenCount = 0;
+                gameRingsLeft = 5;
+                gameRingsThrown = 0;
+                gameHits = 0;
+                gameMisses = 0;
+                gameCombo = 0;
+                gameBestCombo = 0;
+                // Clear rings
+                landedRings.forEach(r => world.scene.remove(r));
+                landedRings.length = 0;
+                flyingRings.forEach(r => { r.active = false; world.scene.remove(r.group); });
+                flyingRings.length = 0;
+                // New layout for new stage
+                currentLayout = (currentLayout + 1) % ALTERNATE_LAYOUTS.length;
+                activePegs = [...ALTERNATE_LAYOUTS[currentLayout]];
+                buildPegs();
+                if (windEnabled) updateWind();
+                showToast('NEXT: ' + TOURN_STAGES[Math.min(tournStage, 3)] + ' vs ' + tournCurrentOpponent().name);
+                audio.playSfx('wave');
+                particles.emit(0, 2, -3, 30, tournCurrentOpponent().color, 3, 1);
+                updateTournPanel();
+              }
+            } else {
+              // Player lost — tournament over
+              showToast('ELIMINATED by ' + tournCurrentOpponent().name);
+              endGame();
+            }
+            return;
+          }
+
+          tournRound++;
+          tournIsPlayerTurn = true;
+          gameRingsLeft = 5;
+          gameRingsThrown = 0;
+          showToast('ROUND ' + tournRound + ' - YOUR TURN');
+          updateTournPanel();
+        }
+      }
+    }
+  }
+
+  function updateTournPanel() {
+    const opp = tournCurrentOpponent();
+    updatePanel(tournEntity, 'tourn-round', 'Round ' + tournRound + ' of ' + tournMaxRounds);
+    updatePanel(tournEntity, 'tourn-stage', TOURN_STAGES[Math.min(tournStage, 3)]);
+    updatePanel(tournEntity, 'tourn-p-score', String(tournPlayerScore));
+    updatePanel(tournEntity, 'tourn-ai-score', String(tournAiScore));
+    updatePanel(tournEntity, 'tourn-opp', opp.name);
+    updatePanel(tournEntity, 'tourn-turn', tournIsPlayerTurn ? 'YOUR TURN' : opp.name + '\'S TURN');
+    updatePanel(tournEntity, 'tourn-rings', 'Rings: ' + (tournIsPlayerTurn ? gameRingsLeft : tournAiRingsLeft));
+    updatePanel(tournEntity, 'tourn-record', 'W' + tournPlayerWins + ' - L' + tournAiWins);
+  }
+
+  // ============================================================
   // INPUT
   // ============================================================
 
@@ -2840,6 +3128,7 @@ async function main() {
   function doThrow() {
     if (gameRingsLeft <= 0 && gameRingsLeft < 900) return;
     if (gameMode === 'duel' && !duelIsPlayerTurn) return; // Can't throw during AI turn
+    if (gameMode === 'tournament' && !tournIsPlayerTurn) return; // Can't throw during AI turn
 
     const flags: { magnet?: boolean; ghost?: boolean; giant?: boolean; fire?: boolean; offsetX?: number; bounce?: boolean } = {};
 
@@ -3155,6 +3444,9 @@ async function main() {
           } else if (gameMode === 'duel' && duelIsPlayerTurn) {
             // End player's round, start AI
             duelEndRound();
+          } else if (gameMode === 'tournament' && tournIsPlayerTurn) {
+            // End player's round, start tournament AI
+            tournEndPlayerRound();
           } else if (gameMode === 'arcade') {
             // Advance to next level
             arcadeNextLevel();
@@ -3168,6 +3460,11 @@ async function main() {
       // Duel AI update
       if (gameMode === 'duel') {
         duelAiUpdate(dt);
+      }
+
+      // Tournament AI update
+      if (gameMode === 'tournament') {
+        tournAiUpdate(dt);
       }
 
       // Arcade bonus timer
