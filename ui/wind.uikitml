@@ -1,0 +1,12 @@
+<!-- ui/wind.uikitml -->
+<style>
+  .panel { display: flex; flex-direction: row; padding: 0.3; background-color: rgba(0,0,0,0.5); border-color: #4488ff; border-width: 0.03; border-radius: 0.3; gap: 0.3; align-items: center; }
+  .label { font-size: 0.8; color: #4488ff; }
+  .dir { font-size: 1.4; color: #4488ff; font-weight: bold; }
+  .str { font-size: 1; color: #88aaff; }
+</style>
+<div class="panel">
+  <span class="label">WIND</span>
+  <span id="wind-dir" class="dir">--</span>
+  <span id="wind-str" class="str">Calm</span>
+</div>

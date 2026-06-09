@@ -1,10 +1,9 @@
 <!-- ui/help.uikitml -->
 <style>
-  .panel { display: flex; flex-direction: column; padding: 2; background-color: rgba(0,0,0,0.85); border-color: #00ffff; border-width: 0.1; border-radius: 1; gap: 0.5; }
+  .panel { display: flex; flex-direction: column; padding: 2; background-color: rgba(0,0,0,0.85); border-color: #00ffff; border-width: 0.1; border-radius: 1; gap: 0.4; }
   .title { font-size: 2.5; color: #00ffff; font-weight: bold; }
   .section { font-size: 1.5; color: #ffcc00; font-weight: bold; }
-  .text { font-size: 1; color: #aaaaaa; }
-  .key { font-size: 1; color: #00ffff; }
+  .text { font-size: 0.9; color: #aaaaaa; }
   .back { font-size: 1.4; color: #888888; background-color: rgba(128,128,128,0.1); padding-top: 0.3; padding-bottom: 0.3; padding-left: 1.5; padding-right: 1.5; border-color: #555555; border-width: 0.05; border-radius: 0.5; cursor: pointer; }
 </style>
 <div class="panel">
@@ -12,25 +11,28 @@
   <span class="section">Browser Controls</span>
   <span class="text">A/D or Arrows: Aim left/right</span>
   <span class="text">SPACE: Hold to charge, release to throw</span>
+  <span class="text">Q: Activate power-up</span>
   <span class="text">ESC/P: Pause | R: Rematch</span>
   <span class="section">VR Controls</span>
   <span class="text">Right Thumbstick: Aim</span>
   <span class="text">Right Trigger: Hold to charge, release to throw</span>
+  <span class="text">A Button: Activate power-up</span>
   <span class="text">B: Pause | Laser pointer: Menus</span>
   <span class="section">Scoring</span>
-  <span class="text">Row 1 (close): 10 points per peg</span>
-  <span class="text">Row 2 (medium): 25 points per peg</span>
-  <span class="text">Row 3 (far): 50 points per peg</span>
-  <span class="text">Golden Peg (very far): 100 points</span>
-  <span class="text">Consecutive ringers build combo multiplier (up to x10)</span>
-  <span class="section">Game Modes</span>
-  <span class="text">Classic: Fixed rings, highest score wins</span>
-  <span class="text">Speed: Timed mode, unlimited rings</span>
-  <span class="text">Target: Ring highlighted pegs for 2x bonus</span>
-  <span class="text">Distance: Focus on far pegs for big scores</span>
-  <span class="text">Trick Shot: Land special trick throws</span>
-  <span class="text">Daily: Same seeded challenge for everyone</span>
-  <span class="text">Survival: 3 misses and you are out</span>
-  <span class="text">Practice: Unlimited, no pressure</span>
+  <span class="text">Row 1 (close): 10 pts | Row 2: 25 pts</span>
+  <span class="text">Row 3 (far): 50 pts | Golden: 100 pts</span>
+  <span class="text">Combo multiplier up to x10</span>
+  <span class="text">Wind affects ring trajectory</span>
+  <span class="section">Power-Ups</span>
+  <span class="text">MULTI: Throw 3 rings at once</span>
+  <span class="text">MAGNET: Ring curves toward nearest peg</span>
+  <span class="text">FIRE: Scores all pegs in blast radius</span>
+  <span class="text">GIANT: 2x ring size, easier ringers</span>
+  <span class="text">GHOST: Pass through first peg to ring behind</span>
+  <span class="text">SLOW-MO: Slow time for 5 seconds</span>
+  <span class="section">Game Modes (12)</span>
+  <span class="text">Classic/Speed/Target/Distance/Trick/Daily</span>
+  <span class="text">Survival/Practice/Marathon/Precision</span>
+  <span class="text">Carnival (moving pegs) / Custom challenge</span>
   <div id="btn-help-back" class="back">BACK</div>
 </div>

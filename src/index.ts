@@ -17,13 +17,17 @@ import {
 
 type GameState = 'title' | 'modeSelect' | 'difficulty' | 'playing' | 'paused' |
   'gameOver' | 'leaderboard' | 'achievements' | 'settings' | 'stats' |
-  'skins' | 'help' | 'countdown';
+  'skins' | 'help' | 'countdown' | 'history' | 'challenge';
 
-type GameMode = 'classic' | 'speed' | 'target' | 'distance' | 'trick' | 'daily' | 'survival' | 'practice';
+type GameMode = 'classic' | 'speed' | 'target' | 'distance' | 'trick' | 'daily' |
+  'survival' | 'practice' | 'marathon' | 'precision' | 'carnival' | 'zen' | 'custom';
 type Difficulty = 'easy' | 'medium' | 'hard';
+type PowerUpType = 'multi' | 'magnet' | 'fire' | 'giant' | 'ghost' | 'slowmo';
 
 interface PegDef {
   x: number; z: number; height: number; points: number; radius: number;
+  moving?: boolean; moveAmplitude?: number; moveSpeed?: number; movePhase?: number;
+  baseX?: number;
 }
 
 interface RingSkin {
@@ -45,8 +49,18 @@ interface LeaderEntry {
   accuracy: number; date: string;
 }
 
+interface PowerUpDef {
+  type: PowerUpType; name: string; desc: string; color: string;
+  duration: number; // seconds (0 = instant)
+}
+
+interface CustomSettings {
+  rings: number; time: number; wind: number; movePegs: boolean; powerUps: boolean;
+}
+
 interface SaveData {
   highScores: LeaderEntry[];
+  gameHistory: LeaderEntry[];
   achievements: string[];
   stats: {
     gamesPlayed: number; totalScore: number; bestScore: number;
@@ -56,6 +70,13 @@ interface SaveData {
     perfectGames: number; modesPlayed: string[];
     skinsUsed: string[]; themesUsed: string[];
     totalPlayTime: number;
+    powerUpsUsed: number; marathonWavesBeat: number;
+    windRingers: number; carnivalBonuses: number;
+    fireBlasts: number; magnetPulls: number;
+    giantRingers: number; ghostPasses: number;
+    multiRingers: number; slowmoRingers: number;
+    bestMarathonWave: number; precisionPerfects: number;
+    zenMinutes: number;
   };
   settings: {
     masterVol: number; sfxVol: number; musicVol: number;
@@ -64,28 +85,26 @@ interface SaveData {
   skin: number;
   xp: number; level: number;
   dailyStreak: number; lastDaily: string;
+  powerUpInventory: Record<PowerUpType, number>;
+  customSettings: CustomSettings;
 }
 
-// Peg layouts - distance from player increases with row
+// Peg layouts
 const PEG_LAYOUTS: PegDef[][] = [
-  // Row 1 - close (3 pegs)
   [
     { x: -0.4, z: -2.0, height: 0.35, points: 10, radius: 0.04 },
     { x: 0.0, z: -2.0, height: 0.35, points: 10, radius: 0.04 },
     { x: 0.4, z: -2.0, height: 0.35, points: 10, radius: 0.04 },
   ],
-  // Row 2 - medium (3 pegs)
   [
     { x: -0.3, z: -3.0, height: 0.4, points: 25, radius: 0.035 },
     { x: 0.15, z: -3.0, height: 0.4, points: 25, radius: 0.035 },
     { x: 0.5, z: -3.0, height: 0.4, points: 25, radius: 0.035 },
   ],
-  // Row 3 - far (2 pegs)
   [
     { x: -0.2, z: -4.0, height: 0.45, points: 50, radius: 0.03 },
     { x: 0.3, z: -4.0, height: 0.45, points: 50, radius: 0.03 },
   ],
-  // Row 4 - very far (1 golden peg)
   [
     { x: 0.0, z: -5.0, height: 0.5, points: 100, radius: 0.025 },
   ],
@@ -99,6 +118,11 @@ const THEMES: Theme[] = [
   { name: 'Toxic Neon', grid: '#33ff33', accent: '#33ff33', bg: '#051005', fog: '#051005', wall: '#001a00', peg: '#22cc22', ring: '#33ff33', glow: '#33ff33' },
   { name: 'Ultra Violet', grid: '#aa33ff', accent: '#aa33ff', bg: '#0a0510', fog: '#0a0510', wall: '#0a001a', peg: '#8822cc', ring: '#aa33ff', glow: '#aa33ff' },
   { name: 'Solar Blaze', grid: '#ff8800', accent: '#ff8800', bg: '#100805', fog: '#100805', wall: '#1a0a00', peg: '#cc6600', ring: '#ff8800', glow: '#ff8800' },
+  { name: 'Deep Ocean', grid: '#0066cc', accent: '#0088ff', bg: '#020812', fog: '#020812', wall: '#001030', peg: '#0055aa', ring: '#0088ff', glow: '#0088ff' },
+  { name: 'Cyber Pink', grid: '#ff33aa', accent: '#ff33aa', bg: '#100510', fog: '#100510', wall: '#1a0015', peg: '#cc2288', ring: '#ff33aa', glow: '#ff33aa' },
+  { name: 'Matrix', grid: '#00ff44', accent: '#00ff44', bg: '#001a00', fog: '#001a00', wall: '#003300', peg: '#00cc33', ring: '#00ff44', glow: '#00ff44' },
+  { name: 'Lava Core', grid: '#ff4400', accent: '#ff6600', bg: '#0a0200', fog: '#0a0200', wall: '#1a0800', peg: '#cc3300', ring: '#ff4400', glow: '#ff6600' },
+  { name: 'Ice Palace', grid: '#88ccff', accent: '#aaddff', bg: '#080c14', fog: '#080c14', wall: '#0a1525', peg: '#6699cc', ring: '#88ccff', glow: '#aaddff' },
 ];
 
 const RING_SKINS: RingSkin[] = [
@@ -109,10 +133,26 @@ const RING_SKINS: RingSkin[] = [
   { name: 'Toxic Green', color: '#33ff33', emissive: '#22aa22', glow: '#33ff33', unlock: 'x5 combo', condition: s => s.stats.bestCombo >= 5 },
   { name: 'Royal Gold', color: '#ffcc00', emissive: '#aa8800', glow: '#ffcc00', unlock: 'Perfect game', condition: s => s.stats.perfectGames >= 1 },
   { name: 'Void Purple', color: '#8833ff', emissive: '#5522aa', glow: '#8833ff', unlock: '80% accuracy', condition: s => s.stats.totalRings > 0 && (s.stats.totalHits / s.stats.totalRings) >= 0.8 },
-  { name: 'Inferno', color: '#ff2200', emissive: '#aa1100', glow: '#ff2200', unlock: 'All modes', condition: s => s.stats.modesPlayed.length >= 7 },
+  { name: 'Inferno', color: '#ff2200', emissive: '#aa1100', glow: '#ff2200', unlock: 'All 8 base modes', condition: s => s.stats.modesPlayed.length >= 8 },
+  { name: 'Chrome', color: '#cccccc', emissive: '#888888', glow: '#ffffff', unlock: 'Level 15', condition: s => s.level >= 15 },
+  { name: 'Electric Blue', color: '#3366ff', emissive: '#2244aa', glow: '#4488ff', unlock: '10 power-ups', condition: s => s.stats.powerUpsUsed >= 10 },
+  { name: 'Sunset', color: '#ff6633', emissive: '#aa4422', glow: '#ff8855', unlock: 'Marathon wave 5', condition: s => s.stats.bestMarathonWave >= 5 },
+  { name: 'Forest', color: '#22aa44', emissive: '#116622', glow: '#33cc55', unlock: '5 wind ringers', condition: s => s.stats.windRingers >= 5 },
+  { name: 'Cosmic', color: '#cc44ff', emissive: '#8822aa', glow: '#dd66ff', unlock: 'Carnival bonus x3', condition: s => s.stats.carnivalBonuses >= 3 },
+  { name: 'Hologram', color: '#88ffcc', emissive: '#55aa88', glow: '#aaffdd', unlock: 'All 12 modes', condition: s => s.stats.modesPlayed.length >= 12 },
+];
+
+const POWER_UP_DEFS: PowerUpDef[] = [
+  { type: 'multi', name: 'MULTI-RING', desc: 'Throw 3 rings at once', color: '#ff33ff', duration: 0 },
+  { type: 'magnet', name: 'MAGNET', desc: 'Ring curves to nearest peg', color: '#4488ff', duration: 0 },
+  { type: 'fire', name: 'FIRE RING', desc: 'Blast scores nearby pegs', color: '#ff4400', duration: 0 },
+  { type: 'giant', name: 'GIANT', desc: '2x ring size', color: '#ffcc00', duration: 0 },
+  { type: 'ghost', name: 'GHOST', desc: 'Pass through to peg behind', color: '#aaddff', duration: 0 },
+  { type: 'slowmo', name: 'SLOW-MO', desc: 'Slow time for 5 seconds', color: '#33ff88', duration: 5 },
 ];
 
 const ACHIEVEMENTS: Achievement[] = [
+  // Original 40
   { id: 'first_ringer', name: 'First Ringer!', desc: 'Land your first ring on a peg' },
   { id: 'ten_ringers', name: 'Getting Good', desc: 'Land 10 total ringers' },
   { id: 'fifty_ringers', name: 'Ring Master', desc: 'Land 50 total ringers' },
@@ -144,15 +184,87 @@ const ACHIEVEMENTS: Achievement[] = [
   { id: 'games_10', name: 'Regular', desc: 'Play 10 games' },
   { id: 'games_50', name: 'Veteran', desc: 'Play 50 games' },
   { id: 'games_100', name: 'Obsessed', desc: 'Play 100 games' },
-  { id: 'all_modes', name: 'Explorer', desc: 'Play every game mode' },
+  { id: 'all_modes', name: 'Explorer', desc: 'Play every base game mode' },
   { id: 'fashionista', name: 'Fashionista', desc: 'Use 3 different ring skins' },
-  { id: 'theme_all', name: 'Theme Tourist', desc: 'Use all 5 arena themes' },
+  { id: 'theme_all', name: 'Theme Tourist', desc: 'Use all 5+ arena themes' },
   { id: 'lv_10', name: 'Rising Star', desc: 'Reach level 10' },
   { id: 'lv_25', name: 'Expert', desc: 'Reach level 25' },
   { id: 'lv_50', name: 'Grandmaster', desc: 'Reach level 50' },
   { id: 'total_10k', name: 'Career 10K', desc: 'Accumulate 10,000 total score' },
   { id: 'total_50k', name: 'Career 50K', desc: 'Accumulate 50,000 total score' },
   { id: 'bounce_ringer', name: 'Lucky Bounce', desc: 'Ring a peg after bouncing off another' },
+  // Power-up achievements (41-55)
+  { id: 'pu_first', name: 'Power Player', desc: 'Use your first power-up' },
+  { id: 'pu_10', name: 'Powered Up', desc: 'Use 10 power-ups total' },
+  { id: 'pu_50', name: 'Power Addict', desc: 'Use 50 power-ups total' },
+  { id: 'pu_multi', name: 'Triple Threat', desc: 'Ring 3 pegs with Multi-Ring' },
+  { id: 'pu_magnet', name: 'Magnetic Pull', desc: 'Get 5 magnet-assisted ringers' },
+  { id: 'pu_fire', name: 'Fire Starter', desc: 'Blast 3+ pegs with Fire Ring' },
+  { id: 'pu_giant', name: 'Big Ring Energy', desc: 'Get 5 giant-ring ringers' },
+  { id: 'pu_ghost', name: 'Ghost Rider', desc: 'Pass through 3 pegs with Ghost' },
+  { id: 'pu_slowmo', name: 'Bullet Time', desc: 'Ring 3 pegs during one Slow-Mo' },
+  { id: 'pu_all_types', name: 'Power Collector', desc: 'Use every power-up type' },
+  { id: 'pu_combo_5', name: 'Powered Combo', desc: 'Get 5x combo with power-up active' },
+  { id: 'pu_fire_golden', name: 'Inferno Golden', desc: 'Hit golden peg with Fire Ring' },
+  { id: 'pu_ghost_double', name: 'Phantom Double', desc: 'Ghost through to ring 2 pegs' },
+  { id: 'pu_magnet_100', name: 'Magnet Sniper', desc: 'Magnet pull to the golden peg' },
+  { id: 'pu_giant_combo', name: 'Giant Streak', desc: 'x5 combo with Giant ring' },
+  // Wind achievements (56-65)
+  { id: 'wind_first', name: 'Wind Warrior', desc: 'Ring a peg in strong wind' },
+  { id: 'wind_5', name: 'Storm Ringer', desc: '5 ringers in windy conditions' },
+  { id: 'wind_20', name: 'Gale Force', desc: '20 ringers in windy conditions' },
+  { id: 'wind_golden', name: 'Tempest Shot', desc: 'Ring golden peg in strong wind' },
+  { id: 'wind_combo_5', name: 'Wind Streak', desc: '5x combo in windy conditions' },
+  { id: 'wind_headwind', name: 'Into the Wind', desc: 'Ringer against headwind' },
+  { id: 'wind_crosswind', name: 'Cross Shot', desc: 'Ringer in crosswind' },
+  { id: 'wind_perfect', name: 'Storm Chaser', desc: '100% accuracy in strong wind game' },
+  { id: 'wind_all_dirs', name: 'Weathervane', desc: 'Ring pegs in all wind directions' },
+  { id: 'wind_calm', name: 'Zen Tosser', desc: 'Get 10x combo in Zen mode' },
+  // Marathon achievements (66-75)
+  { id: 'marathon_w1', name: 'First Wave', desc: 'Complete Marathon wave 1' },
+  { id: 'marathon_w3', name: 'Wave Rider', desc: 'Reach Marathon wave 3' },
+  { id: 'marathon_w5', name: 'Wave Master', desc: 'Reach Marathon wave 5' },
+  { id: 'marathon_w10', name: 'Endless Tosser', desc: 'Reach Marathon wave 10' },
+  { id: 'marathon_score_5k', name: 'Marathon Gold', desc: 'Score 5K in Marathon' },
+  { id: 'marathon_score_10k', name: 'Marathon Platinum', desc: 'Score 10K in Marathon' },
+  { id: 'marathon_no_miss_w', name: 'Clean Wave', desc: 'Complete a Marathon wave with no misses' },
+  { id: 'marathon_streak_3', name: 'Wave Streak', desc: 'Clear 3 waves with 80%+ accuracy each' },
+  { id: 'marathon_golden_w', name: 'Golden Wave', desc: 'Ring golden peg in every wave of a 3+ wave run' },
+  { id: 'marathon_comeback', name: 'Comeback King', desc: 'Miss 2 then ring 5 straight in Marathon' },
+  // Carnival achievements (76-82)
+  { id: 'carnival_first', name: 'Carnival Fun', desc: 'Complete a Carnival game' },
+  { id: 'carnival_moving', name: 'Moving Target', desc: 'Ring a moving peg' },
+  { id: 'carnival_bonus_3', name: 'Bonus Collector', desc: 'Collect 3 carnival bonuses' },
+  { id: 'carnival_score_3k', name: 'Carnival King', desc: 'Score 3K in Carnival' },
+  { id: 'carnival_all_move', name: 'Dance Floor', desc: 'Ring 3 different moving pegs' },
+  { id: 'carnival_perfect', name: 'Carnival Master', desc: 'Perfect accuracy in Carnival' },
+  { id: 'carnival_combo_8', name: 'Party Combo', desc: 'x8 combo in Carnival mode' },
+  // Precision achievements (83-88)
+  { id: 'precision_first', name: 'Precision Player', desc: 'Complete a Precision game' },
+  { id: 'precision_perfect', name: 'Laser Focus', desc: 'Perfect accuracy in Precision' },
+  { id: 'precision_1k', name: 'Precision Grand', desc: 'Score 1K in Precision mode' },
+  { id: 'precision_golden', name: 'Precision Snipe', desc: 'Ring golden peg in Precision' },
+  { id: 'precision_streak', name: 'Precision Streak', desc: '3 perfect Precision games' },
+  { id: 'precision_no_close', name: 'Long Range Only', desc: 'Score in Precision without 10-pt pegs' },
+  // Zen achievements (89-93)
+  { id: 'zen_5min', name: 'Meditation', desc: 'Play 5 minutes in Zen mode' },
+  { id: 'zen_10min', name: 'Deep Focus', desc: 'Play 10 minutes in Zen mode' },
+  { id: 'zen_100rings', name: 'Zen Master', desc: 'Throw 100 rings in Zen mode' },
+  { id: 'zen_combo_10', name: 'Zen Flow', desc: 'x10 combo in Zen mode' },
+  { id: 'zen_golden_5', name: 'Zen Gold', desc: 'Ring golden peg 5 times in one Zen session' },
+  // Milestone achievements (94-105)
+  { id: 'score_25k', name: 'Score Legend', desc: 'Score 25,000+ in a single game' },
+  { id: 'thousand_ringers', name: 'Millennium Ring', desc: 'Land 1,000 total ringers' },
+  { id: 'total_100k', name: 'Career 100K', desc: 'Accumulate 100,000 total score' },
+  { id: 'total_500k', name: 'Career 500K', desc: 'Accumulate 500,000 total score' },
+  { id: 'daily_14', name: 'Fortnight', desc: '14-day daily streak' },
+  { id: 'daily_30', name: 'Monthly Master', desc: '30-day daily streak' },
+  { id: 'all_skins', name: 'Skin Collector', desc: 'Unlock all 14 ring skins' },
+  { id: 'all_themes_10', name: 'Theme Master', desc: 'Use all 10 arena themes' },
+  { id: 'all_12_modes', name: 'Mode Master', desc: 'Play all 12 game modes' },
+  { id: 'play_time_1h', name: 'Hour Player', desc: 'Accumulate 1 hour of play time' },
+  { id: 'play_time_5h', name: 'Five Hours', desc: 'Accumulate 5 hours of play time' },
+  { id: 'combo_perfect_10', name: 'Perfect Ten', desc: 'x10 combo on golden peg ringer' },
 ];
 
 const XP_TITLES = [
@@ -171,6 +283,9 @@ const TRICK_SHOTS = [
   { id: 'triple_row', name: 'Row Clear', desc: 'Ring all pegs in one row during a game' },
 ];
 
+const WIND_LABELS = ['Calm', 'Light', 'Moderate', 'Strong', 'Gale'];
+const WIND_ARROWS = ['--', '←', '→', '↙', '↗', '←←', '→→', '↓', '↑'];
+
 // ============================================================
 // SAVE DATA MANAGEMENT
 // ============================================================
@@ -178,6 +293,7 @@ const TRICK_SHOTS = [
 function defaultSave(): SaveData {
   return {
     highScores: [],
+    gameHistory: [],
     achievements: [],
     stats: {
       gamesPlayed: 0, totalScore: 0, bestScore: 0,
@@ -187,10 +303,19 @@ function defaultSave(): SaveData {
       perfectGames: 0, modesPlayed: [],
       skinsUsed: [], themesUsed: [],
       totalPlayTime: 0,
+      powerUpsUsed: 0, marathonWavesBeat: 0,
+      windRingers: 0, carnivalBonuses: 0,
+      fireBlasts: 0, magnetPulls: 0,
+      giantRingers: 0, ghostPasses: 0,
+      multiRingers: 0, slowmoRingers: 0,
+      bestMarathonWave: 0, precisionPerfects: 0,
+      zenMinutes: 0,
     },
     settings: { masterVol: 0.8, sfxVol: 0.8, musicVol: 0.5, theme: 0, difficulty: 'medium' },
     skin: 0, xp: 0, level: 1,
     dailyStreak: 0, lastDaily: '',
+    powerUpInventory: { multi: 3, magnet: 3, fire: 2, giant: 3, ghost: 2, slowmo: 2 },
+    customSettings: { rings: 10, time: 0, wind: 0, movePegs: false, powerUps: false },
   };
 }
 
@@ -200,7 +325,14 @@ function loadSave(): SaveData {
     if (raw) {
       const s = JSON.parse(raw);
       const d = defaultSave();
-      return { ...d, ...s, stats: { ...d.stats, ...s.stats }, settings: { ...d.settings, ...s.settings } };
+      return {
+        ...d, ...s,
+        stats: { ...d.stats, ...s.stats },
+        settings: { ...d.settings, ...s.settings },
+        powerUpInventory: { ...d.powerUpInventory, ...s.powerUpInventory },
+        customSettings: { ...d.customSettings, ...s.customSettings },
+        gameHistory: s.gameHistory || [],
+      };
     }
   } catch {}
   return defaultSave();
@@ -227,6 +359,7 @@ function dateSeed(): number {
   const d = new Date();
   return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
 }
+
 
 // ============================================================
 // AUDIO ENGINE
@@ -274,7 +407,6 @@ class AudioManager {
 
   playSfx(name: string, pitch = 1.0) {
     if (!this.ctx) return;
-    const t = this.ctx.currentTime;
     const p = pitch * (0.95 + Math.random() * 0.1);
     switch (name) {
       case 'throw': {
@@ -283,7 +415,6 @@ class AudioManager {
         break;
       }
       case 'ringer': {
-        // Satisfying ascending arpeggio
         this.playTone(440 * p, 'sine', 0.4, 0.3);
         setTimeout(() => this.playTone(554 * p, 'sine', 0.3, 0.25), 80);
         setTimeout(() => this.playTone(659 * p, 'sine', 0.3, 0.25), 160);
@@ -309,7 +440,7 @@ class AudioManager {
         break;
       }
       case 'combo': {
-        const base = 440 + save.stats.bestCombo * 30;
+        const base = 440 + gameCombo * 30;
         this.playTone(base * p, 'triangle', 0.2, 0.2);
         setTimeout(() => this.playTone(base * 1.25 * p, 'triangle', 0.2, 0.15), 60);
         break;
@@ -342,8 +473,8 @@ class AudioManager {
       }
       case 'land': {
         this.playTone(120 * p, 'sine', 0.15, 0.1);
-        // Noise burst
         if (this.ctx) {
+          const t = this.ctx.currentTime;
           const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.05, this.ctx.sampleRate);
           const d = buf.getChannelData(0);
           for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.3;
@@ -372,13 +503,53 @@ class AudioManager {
         });
         break;
       }
+      case 'powerup': {
+        this.playTone(660 * p, 'sine', 0.15, 0.25);
+        setTimeout(() => this.playTone(990 * p, 'sine', 0.2, 0.25), 60);
+        setTimeout(() => this.playTone(1320 * p, 'triangle', 0.25, 0.2), 120);
+        break;
+      }
+      case 'fire': {
+        this.playTone(200 * p, 'sawtooth', 0.4, 0.3);
+        this.playTone(100 * p, 'sine', 0.5, 0.2);
+        setTimeout(() => this.playTone(300 * p, 'sawtooth', 0.3, 0.2), 50);
+        break;
+      }
+      case 'slowmo': {
+        this.playTone(880 * p, 'sine', 0.8, 0.15);
+        this.playTone(440 * p, 'triangle', 1.0, 0.1);
+        break;
+      }
+      case 'wind': {
+        if (this.ctx) {
+          const t = this.ctx.currentTime;
+          const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.3, this.ctx.sampleRate);
+          const d = buf.getChannelData(0);
+          for (let i = 0; i < d.length; i++) {
+            d[i] = (Math.random() * 2 - 1) * 0.1 * (1 - i / d.length);
+          }
+          const src = this.ctx.createBufferSource();
+          const g = this.ctx.createGain();
+          src.buffer = buf;
+          g.gain.setValueAtTime(0.08, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+          src.connect(g); g.connect(this.sfxGain!);
+          src.start(t);
+        }
+        break;
+      }
+      case 'wave': {
+        [440, 660, 880, 1100, 880, 660].forEach((f, i) => {
+          setTimeout(() => this.playTone(f * p, 'sine', 0.15, 0.2), i * 50);
+        });
+        break;
+      }
     }
   }
 
   startMusic() {
     if (!this.ctx) return;
     this.stopMusic();
-    // Ambient drone
     const bass = this.ctx.createOscillator();
     const bassG = this.ctx.createGain();
     bass.type = 'sine'; bass.frequency.value = 55;
@@ -400,7 +571,6 @@ class AudioManager {
     sub.connect(subG); subG.connect(this.musicGain!);
     sub.start();
 
-    // LFO for pad
     const lfo = this.ctx.createOscillator();
     const lfoG = this.ctx.createGain();
     lfo.type = 'sine'; lfo.frequency.value = 0.15;
@@ -410,7 +580,6 @@ class AudioManager {
 
     this.droneOscs = [bass, pad, sub, lfo];
 
-    // Arpeggiator
     const arp = this.ctx.createOscillator();
     const aG = this.ctx.createGain();
     arp.type = 'sine'; arp.frequency.value = 220;
@@ -489,20 +658,16 @@ class ParticlePool {
     for (const p of this.particles) {
       if (!p.active) continue;
       p.life -= dt;
-      if (p.life <= 0) {
-        p.active = false;
-        p.mesh.visible = false;
-        continue;
-      }
-      p.vy -= 3 * dt; // gravity
+      if (p.life <= 0) { p.active = false; p.mesh.visible = false; continue; }
+      p.vy -= 3 * dt;
       p.mesh.position.x += p.vx * dt;
       p.mesh.position.y += p.vy * dt;
       p.mesh.position.z += p.vz * dt;
-      const alpha = p.life / p.maxLife;
-      (p.mesh.material as MeshBasicMaterial).opacity = alpha;
+      (p.mesh.material as MeshBasicMaterial).opacity = p.life / p.maxLife;
     }
   }
 }
+
 
 // ============================================================
 // MAIN GAME
@@ -511,12 +676,14 @@ class ParticlePool {
 let save = loadSave();
 const audio = new AudioManager();
 
+// Game state variables (module-level for audio access)
+let gameCombo = 0;
+
 async function main() {
   const container = document.getElementById('app') as HTMLDivElement;
 
   const world = await World.create(container, {
     xr: { offer: 'once' as any },
-    input: { canvasPointerEvents: true },
     features: {
       grabbing: true,
       locomotion: false,
@@ -536,11 +703,9 @@ async function main() {
   // ENVIRONMENT
   // ============================================================
 
-  // Fog
   world.scene.fog = new Fog(theme().bg, 5, 20);
   world.scene.background = new Color(theme().bg);
 
-  // Lighting
   const ambient = new AmbientLight(0x222233, 0.4);
   world.scene.add(ambient);
   const dirLight = new DirectionalLight(0xffffff, 0.3);
@@ -554,14 +719,17 @@ async function main() {
   accentLight2.position.set(2, 3, -4);
   world.scene.add(accentLight2);
 
+  // Combo intensity light
+  const comboLight = new PointLight('#ffffff', 0, 15);
+  comboLight.position.set(0, 3, -3);
+  world.scene.add(comboLight);
+
   // Neon grid floor
   const gridGroup = new Group();
   const gridMat = new LineBasicMaterial({ color: theme().grid, transparent: true, opacity: 0.2 });
   for (let i = -10; i <= 10; i++) {
-    const pts1 = [new Vector3(i, 0, -10), new Vector3(i, 0, 10)];
-    const pts2 = [new Vector3(-10, 0, i), new Vector3(10, 0, i)];
-    const g1 = new BufferGeometry().setFromPoints(pts1);
-    const g2 = new BufferGeometry().setFromPoints(pts2);
+    const g1 = new BufferGeometry().setFromPoints([new Vector3(i, 0, -10), new Vector3(i, 0, 10)]);
+    const g2 = new BufferGeometry().setFromPoints([new Vector3(-10, 0, i), new Vector3(10, 0, i)]);
     gridGroup.add(new Line(g1, gridMat));
     gridGroup.add(new Line(g2, gridMat));
   }
@@ -571,10 +739,8 @@ async function main() {
   const ceilGroup = new Group();
   ceilGroup.position.y = 4;
   for (let i = -10; i <= 10; i++) {
-    const pts1 = [new Vector3(i, 0, -10), new Vector3(i, 0, 10)];
-    const pts2 = [new Vector3(-10, 0, i), new Vector3(10, 0, i)];
-    const g1 = new BufferGeometry().setFromPoints(pts1);
-    const g2 = new BufferGeometry().setFromPoints(pts2);
+    const g1 = new BufferGeometry().setFromPoints([new Vector3(i, 0, -10), new Vector3(i, 0, 10)]);
+    const g2 = new BufferGeometry().setFromPoints([new Vector3(-10, 0, i), new Vector3(10, 0, i)]);
     ceilGroup.add(new Line(g1, gridMat.clone()));
     ceilGroup.add(new Line(g2, gridMat.clone()));
   }
@@ -594,11 +760,7 @@ async function main() {
       color: theme().accent, wireframe: true, transparent: true, opacity: 0.15,
     });
     const m = new Mesh(geo, mat);
-    m.position.set(
-      (Math.random() - 0.5) * 12,
-      1 + Math.random() * 2.5,
-      -3 + (Math.random() - 0.5) * 10,
-    );
+    m.position.set((Math.random() - 0.5) * 12, 1 + Math.random() * 2.5, -3 + (Math.random() - 0.5) * 10);
     m.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
     (m as any)._rotSpeed = 0.2 + Math.random() * 0.3;
     (m as any)._bobOffset = Math.random() * Math.PI * 2;
@@ -614,11 +776,7 @@ async function main() {
   for (let i = 0; i < 40; i++) {
     const mat = new MeshBasicMaterial({ color: theme().accent, transparent: true, opacity: 0.3, blending: AdditiveBlending });
     const m = new Mesh(apGeo, mat);
-    m.position.set(
-      (Math.random() - 0.5) * 14,
-      0.5 + Math.random() * 3,
-      (Math.random() - 0.5) * 14,
-    );
+    m.position.set((Math.random() - 0.5) * 14, 0.5 + Math.random() * 3, (Math.random() - 0.5) * 14);
     (m as any)._vx = (Math.random() - 0.5) * 0.1;
     (m as any)._vy = (Math.random() - 0.5) * 0.05;
     (m as any)._phase = Math.random() * Math.PI * 2;
@@ -626,77 +784,68 @@ async function main() {
     ambientParticles.push(m);
   }
 
-  // Particle pool
-  const particles = new ParticlePool(world.scene, 150);
+  const particles = new ParticlePool(world.scene, 200);
 
   // ============================================================
   // PEG FIELD
   // ============================================================
 
   const pegMeshes: { mesh: Group; def: PegDef; glowMesh: Mesh }[] = [];
+  let activePegs: PegDef[] = [...ALL_PEGS];
 
   function buildPegs() {
-    // Clear old
     pegMeshes.forEach(p => world.scene.remove(p.mesh));
     pegMeshes.length = 0;
 
-    for (const def of ALL_PEGS) {
+    for (const def of activePegs) {
       const g = new Group();
+      const isGolden = def.points >= 100;
 
-      // Base disc
       const baseMat = new MeshStandardMaterial({
-        color: def.points >= 100 ? '#ffcc00' : theme().peg,
-        emissive: def.points >= 100 ? '#aa8800' : theme().peg,
-        emissiveIntensity: 0.5,
-        metalness: 0.7, roughness: 0.3,
+        color: isGolden ? '#ffcc00' : theme().peg,
+        emissive: isGolden ? '#aa8800' : theme().peg,
+        emissiveIntensity: 0.5, metalness: 0.7, roughness: 0.3,
       });
       const base = new Mesh(new CylinderGeometry(def.radius * 3, def.radius * 3, 0.02, 16), baseMat);
       g.add(base);
 
-      // Peg cylinder
       const pegMat = new MeshStandardMaterial({
-        color: def.points >= 100 ? '#ffcc00' : theme().peg,
-        emissive: def.points >= 100 ? '#ffaa00' : theme().peg,
-        emissiveIntensity: 0.8,
-        metalness: 0.8, roughness: 0.2,
+        color: isGolden ? '#ffcc00' : theme().peg,
+        emissive: isGolden ? '#ffaa00' : theme().peg,
+        emissiveIntensity: 0.8, metalness: 0.8, roughness: 0.2,
       });
       const peg = new Mesh(new CylinderGeometry(def.radius, def.radius, def.height, 12), pegMat);
       peg.position.y = def.height / 2;
       g.add(peg);
 
-      // Wireframe edges
       const edges = new LineSegments(
         new EdgesGeometry(peg.geometry),
-        new LineBasicMaterial({ color: def.points >= 100 ? '#ffee88' : theme().glow, transparent: true, opacity: 0.4 })
+        new LineBasicMaterial({ color: isGolden ? '#ffee88' : theme().glow, transparent: true, opacity: 0.4 })
       );
       edges.position.copy(peg.position);
       g.add(edges);
 
-      // Tip sphere
       const tip = new Mesh(
         new SphereGeometry(def.radius * 1.5, 8, 8),
         new MeshStandardMaterial({
-          color: def.points >= 100 ? '#ffcc00' : theme().peg,
-          emissive: def.points >= 100 ? '#ffaa00' : theme().peg,
-          emissiveIntensity: 1.0,
-          metalness: 0.5, roughness: 0.3,
+          color: isGolden ? '#ffcc00' : theme().peg,
+          emissive: isGolden ? '#ffaa00' : theme().peg,
+          emissiveIntensity: 1.0, metalness: 0.5, roughness: 0.3,
         })
       );
       tip.position.y = def.height;
       g.add(tip);
 
-      // Glow sphere
       const glowMat = new MeshBasicMaterial({
-        color: def.points >= 100 ? '#ffcc00' : theme().glow,
+        color: isGolden ? '#ffcc00' : theme().glow,
         transparent: true, opacity: 0.15, blending: AdditiveBlending,
       });
       const glow = new Mesh(new SphereGeometry(def.radius * 4, 8, 8), glowMat);
       glow.position.y = def.height / 2;
       g.add(glow);
 
-      // Score label (point light to hint value)
       if (def.points >= 50) {
-        const pl = new PointLight(def.points >= 100 ? '#ffcc00' : theme().accent, 0.3, 1.5);
+        const pl = new PointLight(isGolden ? '#ffcc00' : theme().accent, 0.3, 1.5);
         pl.position.y = def.height + 0.1;
         g.add(pl);
       }
@@ -708,10 +857,6 @@ async function main() {
   }
   buildPegs();
 
-  // ============================================================
-  // THROWING PLATFORM
-  // ============================================================
-
   // Throw line marker
   const throwLine = new Mesh(
     new BoxGeometry(1.5, 0.005, 0.02),
@@ -721,151 +866,237 @@ async function main() {
   world.scene.add(throwLine);
 
   // ============================================================
+  // WIND SYSTEM
+  // ============================================================
+
+  let windX = 0; // horizontal wind force
+  let windZ = 0; // forward/back wind force
+  let windStrength = 0; // 0-4 index
+  let windEnabled = false;
+  let windThrowCounter = 0;
+  let windDirsUsed = new Set<string>();
+
+  function updateWind() {
+    if (!windEnabled) {
+      windX = 0; windZ = 0; windStrength = 0;
+      return;
+    }
+    const angle = Math.random() * Math.PI * 2;
+    const str = 0.5 + Math.random() * 2.0;
+    windX = Math.cos(angle) * str;
+    windZ = Math.sin(angle) * str * 0.5;
+    windStrength = Math.min(4, Math.floor(str / 0.5));
+
+    // Track wind direction
+    if (windX < -0.3) windDirsUsed.add('left');
+    if (windX > 0.3) windDirsUsed.add('right');
+    if (windZ < -0.3) windDirsUsed.add('forward');
+    if (windZ > 0.3) windDirsUsed.add('back');
+
+    audio.playSfx('wind');
+  }
+
+  function getWindArrow(): string {
+    if (windStrength === 0) return '--';
+    const absX = Math.abs(windX);
+    const absZ = Math.abs(windZ);
+    if (absX > absZ) return windX < 0 ? (windStrength >= 3 ? '←←' : '←') : (windStrength >= 3 ? '→→' : '→');
+    return windZ < 0 ? '↑' : '↓';
+  }
+
+  // ============================================================
   // RING CREATION & PHYSICS
   // ============================================================
 
   interface FlyingRing {
     group: Group;
     vx: number; vy: number; vz: number;
-    rx: number; rz: number; // angular velocity for tumble
+    rx: number; rz: number;
     active: boolean;
     landed: boolean;
     landedOnPeg: PegDef | null;
-    bounced: boolean; // track if it bounced off a peg before landing
+    bounced: boolean;
     age: number;
     trail: Vector3[];
+    hasMagnet: boolean;
+    isGhost: boolean;
+    ghostPassed: number;
+    isGiant: boolean;
+    isFire: boolean;
   }
 
   const flyingRings: FlyingRing[] = [];
   const landedRings: Group[] = [];
 
-  function createRingMesh(): Group {
+  function createRingMesh(isGiant = false, specialColor?: string): Group {
     const g = new Group();
     const skin = skinDef();
+    const col = specialColor || skin.color;
+    const em = specialColor || skin.emissive;
+    const gl = specialColor || skin.glow;
+    const scale = isGiant ? 2.0 : 1.0;
 
-    // Main ring torus
     const ringMat = new MeshStandardMaterial({
-      color: skin.color, emissive: skin.emissive,
-      emissiveIntensity: 0.7, metalness: 0.6, roughness: 0.3,
+      color: col, emissive: em, emissiveIntensity: 0.7, metalness: 0.6, roughness: 0.3,
     });
-    const ring = new Mesh(new TorusGeometry(0.08, 0.015, 8, 24), ringMat);
-    ring.rotation.x = Math.PI / 2; // flat orientation
+    const ring = new Mesh(new TorusGeometry(0.08 * scale, 0.015 * scale, 8, 24), ringMat);
+    ring.rotation.x = Math.PI / 2;
     g.add(ring);
 
-    // Wireframe
     const edges = new LineSegments(
       new EdgesGeometry(ring.geometry),
-      new LineBasicMaterial({ color: skin.glow, transparent: true, opacity: 0.5 })
+      new LineBasicMaterial({ color: gl, transparent: true, opacity: 0.5 })
     );
     edges.rotation.x = Math.PI / 2;
     g.add(edges);
 
-    // Glow
     const glowMat = new MeshBasicMaterial({
-      color: skin.glow, transparent: true, opacity: 0.2, blending: AdditiveBlending,
+      color: gl, transparent: true, opacity: 0.2, blending: AdditiveBlending,
     });
-    const glow = new Mesh(new TorusGeometry(0.08, 0.03, 8, 24), glowMat);
+    const glow = new Mesh(new TorusGeometry(0.08 * scale, 0.03 * scale, 8, 24), glowMat);
     glow.rotation.x = Math.PI / 2;
     g.add(glow);
 
     return g;
   }
 
-  function throwRing(power: number, aimX: number, aimY: number) {
-    const ring = createRingMesh();
-    // Start from player position
-    ring.position.set(aimX * 0.3, 1.2, -0.3);
+  function throwRing(power: number, aimXVal: number, aimYVal: number, flags?: {
+    magnet?: boolean; ghost?: boolean; giant?: boolean; fire?: boolean; offsetX?: number;
+  }) {
+    const f = flags || {};
+    const ring = createRingMesh(
+      f.giant,
+      f.fire ? '#ff4400' : f.ghost ? '#aaddff88' : f.magnet ? '#4488ff' : undefined,
+    );
+    const ox = f.offsetX || 0;
+    ring.position.set(aimXVal * 0.3 + ox, 1.2, -0.3);
     world.scene.add(ring);
 
-    const speed = 3 + power * 5; // 3-8 m/s forward
-    const upSpeed = 2 + power * 2; // arc
+    const speed = 3 + power * 5;
+    const upSpeed = 2 + power * 2;
 
     const fr: FlyingRing = {
       group: ring,
-      vx: aimX * 1.5,
+      vx: aimXVal * 1.5 + ox * 3,
       vy: upSpeed,
       vz: -speed,
       rx: (Math.random() - 0.5) * 3,
       rz: (Math.random() - 0.5) * 2,
-      active: true,
-      landed: false,
-      landedOnPeg: null,
-      bounced: false,
-      age: 0,
-      trail: [],
+      active: true, landed: false, landedOnPeg: null,
+      bounced: false, age: 0, trail: [],
+      hasMagnet: !!f.magnet,
+      isGhost: !!f.ghost,
+      ghostPassed: 0,
+      isGiant: !!f.giant,
+      isFire: !!f.fire,
     };
     flyingRings.push(fr);
     audio.playSfx('throw');
     gameRingsThrown++;
   }
 
-  // Trail rendering
-  const trailMat = new LineBasicMaterial({
-    color: skinDef().glow, transparent: true, opacity: 0.3, blending: AdditiveBlending,
-  });
-  const trailLines: Line[] = [];
-
   function updateRingPhysics(dt: number) {
+    const timeMult = slowmoActive ? 0.3 : 1.0;
+    const effectiveDt = dt * timeMult;
+
     for (const fr of flyingRings) {
       if (!fr.active) continue;
-      fr.age += dt;
+      fr.age += effectiveDt;
 
       // Gravity
-      fr.vy -= 6.0 * dt;
+      fr.vy -= 6.0 * effectiveDt;
 
-      // Update position
-      fr.group.position.x += fr.vx * dt;
-      fr.group.position.y += fr.vy * dt;
-      fr.group.position.z += fr.vz * dt;
+      // Wind
+      if (windEnabled) {
+        fr.vx += windX * effectiveDt * 0.5;
+        fr.vz += windZ * effectiveDt * 0.3;
+      }
 
-      // Tumble rotation
-      fr.group.rotation.x += fr.rx * dt;
-      fr.group.rotation.z += fr.rz * dt;
+      // Magnet: curve toward nearest peg
+      if (fr.hasMagnet && fr.age > 0.2) {
+        let nearDist = Infinity;
+        let nearPeg: PegDef | null = null;
+        for (const peg of activePegs) {
+          const dx = peg.x - fr.group.position.x;
+          const dz = peg.z - fr.group.position.z;
+          const d = Math.sqrt(dx * dx + dz * dz);
+          if (d < nearDist) { nearDist = d; nearPeg = peg; }
+        }
+        if (nearPeg && nearDist < 2) {
+          const dx = nearPeg.x - fr.group.position.x;
+          const dz = nearPeg.z - fr.group.position.z;
+          const force = 2.0 / Math.max(nearDist, 0.3);
+          fr.vx += dx / nearDist * force * effectiveDt;
+          fr.vz += dz / nearDist * force * effectiveDt;
+        }
+      }
 
-      // Trail
+      fr.group.position.x += fr.vx * effectiveDt;
+      fr.group.position.y += fr.vy * effectiveDt;
+      fr.group.position.z += fr.vz * effectiveDt;
+      fr.group.rotation.x += fr.rx * effectiveDt;
+      fr.group.rotation.z += fr.rz * effectiveDt;
+
       fr.trail.push(fr.group.position.clone());
       if (fr.trail.length > 25) fr.trail.shift();
 
-      // Check peg collision (ring encirclement)
-      for (const peg of pegMeshes) {
-        const dx = fr.group.position.x - peg.def.x;
-        const dz = fr.group.position.z - peg.def.z;
+      const ringRadius = fr.isGiant ? 0.16 : 0.08;
+      const encircleRange = fr.isGiant ? 0.24 : 0.12;
+      const directHitRange = fr.isGiant ? 0.12 : 0.06;
+
+      // Check peg collision
+      for (const pm of pegMeshes) {
+        const peg = pm.def;
+        const pegX = pm.mesh.position.x; // use mesh position for moving pegs
+        const dx = fr.group.position.x - pegX;
+        const dz = fr.group.position.z - peg.z;
         const dist2D = Math.sqrt(dx * dx + dz * dz);
         const ringY = fr.group.position.y;
 
-        // Ring must be at peg height and within encirclement distance
-        if (dist2D < 0.12 && ringY > 0 && ringY < peg.def.height + 0.1 && fr.vy < 0) {
-          // Check if ring is descending and close enough to encircle
-          if (dist2D < 0.06) {
-            // Direct hit on peg body - bounce
+        if (dist2D < encircleRange && ringY > 0 && ringY < peg.height + 0.1 && fr.vy < 0) {
+          if (dist2D < directHitRange) {
+            if (fr.isGhost && fr.ghostPassed < 2) {
+              fr.ghostPassed++;
+              save.stats.ghostPasses++;
+              continue;
+            }
+            // Bounce off peg body
             fr.vx += dx * 3;
             fr.vz += dz * 3;
             fr.vy *= -0.3;
             fr.bounced = true;
             audio.playSfx('bounce');
-          } else if (dist2D < 0.12 && ringY < peg.def.height - 0.05) {
-            // Ring is sliding down around the peg - RINGER!
+          } else if (dist2D < encircleRange && ringY < peg.height - 0.05) {
+            // RINGER!
             fr.active = false;
             fr.landed = true;
-            fr.landedOnPeg = peg.def;
+            fr.landedOnPeg = peg;
 
-            // Settle ring on peg
-            fr.group.position.set(peg.def.x, 0.05, peg.def.z);
-            fr.group.rotation.set(Math.PI / 2, 0, 0); // flat
+            fr.group.position.set(pegX, 0.05, peg.z);
+            fr.group.rotation.set(Math.PI / 2, 0, 0);
             landedRings.push(fr.group);
 
-            onRinger(peg.def, fr.bounced);
+            // Fire ring: blast nearby pegs
+            if (fr.isFire) {
+              onFireBlast(peg, pegX);
+            } else {
+              onRinger(peg, fr.bounced, fr.hasMagnet, fr.isGiant);
+            }
             break;
           }
         }
 
-        // Near-miss peg bounce (ring hits peg from side)
-        if (dist2D < peg.def.radius + 0.08 + 0.015 && ringY > 0 && ringY < peg.def.height) {
-          // Bounce off peg
+        // Near-miss bounce
+        if (dist2D < peg.radius + ringRadius + 0.015 && ringY > 0 && ringY < peg.height) {
+          if (fr.isGhost && fr.ghostPassed < 2) {
+            fr.ghostPassed++;
+            save.stats.ghostPasses++;
+            continue;
+          }
           const nx = dx / dist2D;
           const nz = dz / dist2D;
           const dot = fr.vx * nx + fr.vz * nz;
-          if (dot < 0) { // approaching
+          if (dot < 0) {
             fr.vx -= 2 * dot * nx * 0.6;
             fr.vz -= 2 * dot * nz * 0.6;
             fr.vy *= 0.7;
@@ -881,17 +1112,13 @@ async function main() {
         fr.landed = true;
         if (!fr.landedOnPeg) {
           onMiss();
-          // Remove after delay
-          setTimeout(() => {
-            world.scene.remove(fr.group);
-          }, 1000);
+          setTimeout(() => { world.scene.remove(fr.group); }, 1000);
         }
         audio.playSfx('land');
       }
 
       // Out of bounds
-      if (fr.group.position.z < -8 || fr.group.position.y < -2 ||
-        Math.abs(fr.group.position.x) > 5) {
+      if (fr.group.position.z < -8 || fr.group.position.y < -2 || Math.abs(fr.group.position.x) > 5) {
         fr.active = false;
         fr.landed = true;
         if (!fr.landedOnPeg) onMiss();
@@ -899,13 +1126,12 @@ async function main() {
       }
     }
 
-    // Clean up inactive
+    // Cleanup
     for (let i = flyingRings.length - 1; i >= 0; i--) {
-      if (!flyingRings[i].active && flyingRings[i].age > 3) {
-        flyingRings.splice(i, 1);
-      }
+      if (!flyingRings[i].active && flyingRings[i].age > 3) flyingRings.splice(i, 1);
     }
   }
+
 
   // ============================================================
   // GAME STATE
@@ -919,12 +1145,10 @@ async function main() {
   let gameRingsThrown = 0;
   let gameHits = 0;
   let gameMisses = 0;
-  let gameCombo = 0;
   let gameBestCombo = 0;
   let gameTimeLeft = 0;
   let gameTimePlayed = 0;
   let gameStartTime = 0;
-  let gamePaused = false;
   let isCharging = false;
   let chargePower = 0;
   let aimX = 0;
@@ -934,24 +1158,87 @@ async function main() {
   let comboDecayTimer = 0;
   let trickShotsThisGame: string[] = [];
   let pegHitsThisGame: Map<string, number> = new Map();
-  let targetPeg: PegDef | null = null; // for target mode
+  let targetPeg: PegDef | null = null;
   let dailyRng: (() => number) | null = null;
-  let achievementQueue: string[] = [];
   let toastMsg = '';
   let toastTimer = 0;
+
+  // Power-up state
+  let activePowerUp: PowerUpType | null = null;
+  let powerUpTimer = 0;
+  let slowmoActive = false;
+  let slowmoRingersCount = 0;
+  let powerUpTypesUsed = new Set<PowerUpType>();
+  let nextPowerUp: PowerUpType | null = null;
+
+  // Marathon state
+  let marathonWave = 0;
+  let marathonWaveRings = 0;
+  let marathonWaveHits = 0;
+  let marathonWaveMisses = 0;
+  let marathonCleanWaves = 0;
+  let marathonGoldenWaves = 0;
+  let marathonGoldenThisWave = false;
+  let marathonComeback = 0; // tracks miss→hit pattern
+  let marathonMissBefore = 0;
+
+  // Custom challenge state
+  let customRings = 10;
+  let customTime = 0;
+  let customWind = 0;
+  let customMovePegs = false;
+  let customPowerUps = false;
+
+  // Zen state
+  let zenGoldenCount = 0;
+
+  // ============================================================
+  // POWER-UP SYSTEM
+  // ============================================================
+
+  function selectRandomPowerUp(): PowerUpType {
+    const types: PowerUpType[] = ['multi', 'magnet', 'fire', 'giant', 'ghost', 'slowmo'];
+    return types[Math.floor(Math.random() * types.length)];
+  }
+
+  function activatePowerUp(type: PowerUpType) {
+    const def = POWER_UP_DEFS.find(p => p.type === type)!;
+    save.stats.powerUpsUsed++;
+    powerUpTypesUsed.add(type);
+    checkAchievement('pu_first');
+    if (save.stats.powerUpsUsed >= 10) checkAchievement('pu_10');
+    if (save.stats.powerUpsUsed >= 50) checkAchievement('pu_50');
+    if (powerUpTypesUsed.size >= 6) checkAchievement('pu_all_types');
+
+    audio.playSfx('powerup');
+    showToast(def.name + '!');
+
+    if (type === 'slowmo') {
+      slowmoActive = true;
+      powerUpTimer = 5;
+      slowmoRingersCount = 0;
+      audio.playSfx('slowmo');
+    }
+
+    activePowerUp = type;
+    if (def.duration > 0) {
+      powerUpTimer = def.duration;
+    }
+    nextPowerUp = selectRandomPowerUp();
+    saveSave(save);
+  }
 
   // ============================================================
   // SCORING & EVENTS
   // ============================================================
 
-  function onRinger(peg: PegDef, bounced: boolean) {
+  function onRinger(peg: PegDef, bounced: boolean, magnetic = false, giant = false) {
     gameHits++;
     gameCombo++;
     comboDecayTimer = 2.5;
     if (gameCombo > gameBestCombo) gameBestCombo = gameCombo;
 
     let points = peg.points;
-    // Combo multiplier
     const mult = Math.min(gameCombo, 10);
     points *= mult;
 
@@ -962,21 +1249,69 @@ async function main() {
       pickTargetPeg();
     }
 
+    // Precision mode: 5x scoring
+    if (gameMode === 'precision') points *= 5;
+
+    // Carnival bonus multiplier
+    if (gameMode === 'carnival' && peg.moving) {
+      points *= 2;
+      save.stats.carnivalBonuses++;
+      showToast('MOVING PEG x2!');
+      checkAchievement('carnival_moving');
+    }
+
     gameScore += points;
 
-    // Track peg hits
     const key = `${peg.x},${peg.z}`;
     pegHitsThisGame.set(key, (pegHitsThisGame.get(key) || 0) + 1);
 
+    // Wind ringer tracking
+    if (windEnabled && windStrength >= 2) {
+      save.stats.windRingers++;
+      checkAchievement('wind_first');
+      if (save.stats.windRingers >= 5) checkAchievement('wind_5');
+      if (save.stats.windRingers >= 20) checkAchievement('wind_20');
+      if (peg.points >= 100) checkAchievement('wind_golden');
+      if (gameCombo >= 5) checkAchievement('wind_combo_5');
+      if (windX < -0.5) checkAchievement('wind_crosswind');
+      if (windX > 0.5) checkAchievement('wind_crosswind');
+      if (windZ < -0.5) checkAchievement('wind_headwind');
+    }
+
+    // Power-up stat tracking
+    if (magnetic) { save.stats.magnetPulls++; if (save.stats.magnetPulls >= 5) checkAchievement('pu_magnet'); if (peg.points >= 100) checkAchievement('pu_magnet_100'); }
+    if (giant) { save.stats.giantRingers++; if (save.stats.giantRingers >= 5) checkAchievement('pu_giant'); if (gameCombo >= 5) checkAchievement('pu_giant_combo'); }
+    if (slowmoActive) { slowmoRingersCount++; save.stats.slowmoRingers++; if (slowmoRingersCount >= 3) checkAchievement('pu_slowmo'); }
+    if (activePowerUp && gameCombo >= 5) checkAchievement('pu_combo_5');
+
+    // Slowmo ringer count
+    if (slowmoActive) save.stats.slowmoRingers++;
+
+    // Marathon tracking
+    if (gameMode === 'marathon') {
+      marathonWaveHits++;
+      if (peg.points >= 100) marathonGoldenThisWave = true;
+      // Comeback tracking
+      if (marathonMissBefore >= 2) { marathonComeback++; if (marathonComeback >= 5) checkAchievement('marathon_comeback'); }
+      marathonMissBefore = 0;
+    }
+
+    // Zen golden tracking
+    if (gameMode === 'zen' && peg.points >= 100) {
+      zenGoldenCount++;
+      if (zenGoldenCount >= 5) checkAchievement('zen_golden_5');
+    }
+
     // Effects
     const color = peg.points >= 100 ? '#ffcc00' : theme().accent;
-    particles.emit(peg.x, peg.height, peg.z, 20, color, 2.5, 0.8);
+    particles.emit(peg.x, peg.height, peg.z, 25, color, 2.5, 0.8);
 
     if (peg.points >= 100) {
       audio.playSfx('golden');
       showToast('GOLDEN RINGER! +' + points);
       checkAchievement('golden_ringer');
       checkAchievement('distance_100');
+      if (gameCombo >= 10) checkAchievement('combo_perfect_10');
     } else if (peg.points >= 50) {
       audio.playSfx('ringer', 1.1);
       showToast('+' + points + (mult > 1 ? ' x' + mult : ''));
@@ -990,33 +1325,58 @@ async function main() {
     if (gameCombo >= 3) { audio.playSfx('combo'); checkAchievement('combo_3'); }
     if (gameCombo >= 5) checkAchievement('combo_5');
     if (gameCombo >= 8) checkAchievement('combo_8');
-    if (gameCombo >= 10) checkAchievement('combo_10');
-
-    // Bounce ringer
+    if (gameCombo >= 10) { checkAchievement('combo_10'); if (gameMode === 'zen') checkAchievement('zen_combo_10'); if (gameMode === 'zen') checkAchievement('wind_calm'); }
     if (bounced) checkAchievement('bounce_ringer');
-
-    // Check tricks
-    if (chargePower >= 0.95) { trickShotsThisGame.push('max_power'); checkAchievement('trick_3'); }
-    if (chargePower <= 0.15) { trickShotsThisGame.push('min_power'); checkAchievement('trick_3'); }
+    if (chargePower >= 0.95) trickShotsThisGame.push('max_power');
+    if (chargePower <= 0.15) trickShotsThisGame.push('min_power');
     if (peg.points >= 100) trickShotsThisGame.push('far_golden');
-
-    // First ringer
     checkAchievement('first_ringer');
 
+    updateHUD();
+  }
+
+  function onFireBlast(centerPeg: PegDef, pegX: number) {
+    // Score center peg + all pegs within blast radius
+    let hitCount = 0;
+    save.stats.fireBlasts++;
+    audio.playSfx('fire');
+    particles.emit(pegX, centerPeg.height, centerPeg.z, 40, '#ff4400', 4, 1.0);
+
+    for (const pm of pegMeshes) {
+      const peg = pm.def;
+      const px = pm.mesh.position.x;
+      const dx = px - pegX;
+      const dz = peg.z - centerPeg.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist < 1.5) {
+        hitCount++;
+        gameHits++;
+        gameCombo++;
+        comboDecayTimer = 2.5;
+        if (gameCombo > gameBestCombo) gameBestCombo = gameCombo;
+        const points = peg.points * Math.min(gameCombo, 10);
+        gameScore += points;
+        particles.emit(px, peg.height, peg.z, 15, '#ff6600', 2, 0.5);
+        if (peg.points >= 100) checkAchievement('pu_fire_golden');
+      }
+    }
+
+    if (hitCount >= 3) checkAchievement('pu_fire');
+    showToast('FIRE BLAST! ' + hitCount + ' pegs!');
     updateHUD();
   }
 
   function onMiss() {
     gameMisses++;
     gameCombo = 0;
+    if (gameMode === 'marathon') { marathonWaveMisses++; marathonMissBefore++; marathonComeback = 0; }
     audio.playSfx('miss');
     updateHUD();
   }
 
   function pickTargetPeg() {
-    const idx = Math.floor(Math.random() * ALL_PEGS.length);
-    targetPeg = ALL_PEGS[idx];
-    // Highlight target peg
+    const idx = Math.floor(Math.random() * activePegs.length);
+    targetPeg = activePegs[idx];
     pegMeshes.forEach(p => {
       const isTarget = p.def === targetPeg;
       (p.glowMesh.material as MeshBasicMaterial).opacity = isTarget ? 0.5 : 0.15;
@@ -1053,12 +1413,31 @@ async function main() {
       if (save.level >= 25) checkAchievement('lv_25');
       if (save.level >= 50) checkAchievement('lv_50');
     }
+
+    // Grant power-ups on level up
+    if (save.level % 3 === 0) {
+      const type = selectRandomPowerUp();
+      save.powerUpInventory[type] = (save.powerUpInventory[type] || 0) + 1;
+      showToast('Got ' + POWER_UP_DEFS.find(p => p.type === type)!.name + '!');
+    }
     saveSave(save);
   }
 
   // ============================================================
   // GAME FLOW
   // ============================================================
+
+  function setupMovingPegs() {
+    // Make some pegs move for carnival mode
+    activePegs = ALL_PEGS.map(p => ({
+      ...p,
+      moving: true,
+      baseX: p.x,
+      moveAmplitude: 0.15 + Math.random() * 0.2,
+      moveSpeed: 0.8 + Math.random() * 0.8,
+      movePhase: Math.random() * Math.PI * 2,
+    }));
+  }
 
   function startGame(mode: GameMode) {
     gameMode = mode;
@@ -1074,12 +1453,33 @@ async function main() {
     trickShotsThisGame = [];
     pegHitsThisGame.clear();
     targetPeg = null;
+    activePowerUp = null;
+    powerUpTimer = 0;
+    slowmoActive = false;
+    slowmoRingersCount = 0;
+    powerUpTypesUsed.clear();
+    nextPowerUp = selectRandomPowerUp();
+    marathonWave = 1;
+    marathonWaveRings = 0;
+    marathonWaveHits = 0;
+    marathonWaveMisses = 0;
+    marathonCleanWaves = 0;
+    marathonGoldenWaves = 0;
+    marathonGoldenThisWave = false;
+    marathonComeback = 0;
+    marathonMissBefore = 0;
+    zenGoldenCount = 0;
+    windDirsUsed.clear();
 
-    // Clear landed rings
+    // Clear rings
     landedRings.forEach(r => world.scene.remove(r));
     landedRings.length = 0;
     flyingRings.forEach(r => { r.active = false; world.scene.remove(r.group); });
     flyingRings.length = 0;
+
+    // Reset pegs to default
+    activePegs = [...ALL_PEGS];
+    windEnabled = false;
 
     const diff = gameDifficulty;
     switch (mode) {
@@ -1108,6 +1508,8 @@ async function main() {
         gameRingsLeft = 10;
         gameTimeLeft = 0;
         dailyRng = mulberry32(dateSeed());
+        windEnabled = true;
+        updateWind();
         break;
       case 'survival':
         gameRingsLeft = 999;
@@ -1117,28 +1519,61 @@ async function main() {
         gameRingsLeft = 999;
         gameTimeLeft = 0;
         break;
+      case 'marathon':
+        gameRingsLeft = 10;
+        gameTimeLeft = 0;
+        windEnabled = true;
+        updateWind();
+        break;
+      case 'precision':
+        gameRingsLeft = 3;
+        gameTimeLeft = 0;
+        break;
+      case 'carnival':
+        gameRingsLeft = diff === 'easy' ? 15 : diff === 'medium' ? 10 : 7;
+        gameTimeLeft = 0;
+        setupMovingPegs();
+        windEnabled = true;
+        updateWind();
+        break;
+      case 'zen':
+        gameRingsLeft = 999;
+        gameTimeLeft = 0;
+        windEnabled = false;
+        break;
+      case 'custom':
+        gameRingsLeft = save.customSettings.rings;
+        gameTimeLeft = save.customSettings.time;
+        windEnabled = save.customSettings.wind > 0;
+        if (save.customSettings.movePegs) setupMovingPegs();
+        if (windEnabled) updateWind();
+        break;
     }
 
     gameRingsThrown = 0;
+    windThrowCounter = 0;
+
+    // Rebuild pegs for new layout
+    buildPegs();
 
     // Track mode played
     if (!save.stats.modesPlayed.includes(mode)) {
       save.stats.modesPlayed.push(mode);
-      if (save.stats.modesPlayed.length >= 7) checkAchievement('all_modes');
+      if (save.stats.modesPlayed.length >= 8) checkAchievement('all_modes');
+      if (save.stats.modesPlayed.length >= 12) checkAchievement('all_12_modes');
     }
 
-    // Track skin used
     const skinName = RING_SKINS[save.skin].name;
     if (!save.stats.skinsUsed.includes(skinName)) {
       save.stats.skinsUsed.push(skinName);
       if (save.stats.skinsUsed.length >= 3) checkAchievement('fashionista');
     }
 
-    // Track theme used
     const themeName = THEMES[save.settings.theme].name;
     if (!save.stats.themesUsed.includes(themeName)) {
       save.stats.themesUsed.push(themeName);
       if (save.stats.themesUsed.length >= 5) checkAchievement('theme_all');
+      if (save.stats.themesUsed.length >= 10) checkAchievement('all_themes_10');
     }
 
     saveSave(save);
@@ -1147,19 +1582,69 @@ async function main() {
     gameState = 'countdown';
     countdownValue = 3;
     countdownTimer = 0;
+    hideAllPanels();
     showPanel(countdownEntity);
     updatePanel(countdownEntity, 'cd-text', '3');
     audio.playSfx('countdown');
+  }
 
-    hideAllPanels();
-    showPanel(countdownEntity);
+  function advanceMarathonWave() {
+    // Check wave completion achievements
+    if (marathonWaveMisses === 0 && marathonWaveHits > 0) {
+      marathonCleanWaves++;
+      checkAchievement('marathon_no_miss_w');
+    }
+    if (marathonGoldenThisWave) marathonGoldenWaves++;
+
+    save.stats.marathonWavesBeat++;
+    if (marathonWave >= 1) checkAchievement('marathon_w1');
+    if (marathonWave >= 3) checkAchievement('marathon_w3');
+    if (marathonWave >= 5) checkAchievement('marathon_w5');
+    if (marathonWave >= 10) checkAchievement('marathon_w10');
+    if (marathonCleanWaves >= 3) checkAchievement('marathon_streak_3');
+    if (marathonGoldenWaves >= 3 && marathonWave >= 3) checkAchievement('marathon_golden_w');
+    if (marathonWave > save.stats.bestMarathonWave) save.stats.bestMarathonWave = marathonWave;
+
+    marathonWave++;
+    marathonWaveRings = 0;
+    marathonWaveHits = 0;
+    marathonWaveMisses = 0;
+    marathonGoldenThisWave = false;
+
+    // Each wave: more rings but also harder
+    gameRingsLeft = 8 + marathonWave * 2;
+
+    // Increase wind intensity per wave
+    windEnabled = true;
+    updateWind();
+
+    // Some waves introduce moving pegs
+    if (marathonWave >= 3 && marathonWave % 2 === 1) {
+      const moveFraction = Math.min(0.6, 0.2 + marathonWave * 0.05);
+      activePegs = ALL_PEGS.map(p => {
+        if (Math.random() < moveFraction) {
+          return { ...p, moving: true, baseX: p.x, moveAmplitude: 0.1 + Math.random() * 0.15, moveSpeed: 0.5 + marathonWave * 0.1, movePhase: Math.random() * Math.PI * 2 };
+        }
+        return { ...p };
+      });
+      buildPegs();
+    }
+
+    // Grant a random power-up each wave
+    const type = selectRandomPowerUp();
+    save.powerUpInventory[type] = (save.powerUpInventory[type] || 0) + 1;
+
+    showToast('WAVE ' + marathonWave + '!');
+    audio.playSfx('wave');
+    updatePanel(waveEntity, 'wave-num', 'WAVE ' + marathonWave);
+    updatePanel(waveEntity, 'wave-info', gameRingsLeft + ' rings');
+    saveSave(save);
   }
 
   function endGame() {
     gameState = 'gameOver';
     gameTimePlayed = (Date.now() - gameStartTime) / 1000;
 
-    // Stats
     save.stats.gamesPlayed++;
     save.stats.totalScore += gameScore;
     if (gameScore > save.stats.bestScore) save.stats.bestScore = gameScore;
@@ -1171,7 +1656,8 @@ async function main() {
     save.stats.totalPlayTime += gameTimePlayed;
     save.stats.trickShotsLanded += new Set(trickShotsThisGame).size;
 
-    // Perfect game check
+    if (gameMode === 'zen') save.stats.zenMinutes += gameTimePlayed / 60;
+
     const accuracy = gameRingsThrown > 0 ? gameHits / gameRingsThrown : 0;
     if (accuracy >= 1.0 && gameRingsThrown >= 5 && gameMode === 'classic') {
       save.stats.perfectGames++;
@@ -1183,10 +1669,12 @@ async function main() {
     if (save.stats.ringerCount >= 50) checkAchievement('fifty_ringers');
     if (save.stats.ringerCount >= 100) checkAchievement('hundred_ringers');
     if (save.stats.ringerCount >= 500) checkAchievement('five_hundred');
+    if (save.stats.ringerCount >= 1000) checkAchievement('thousand_ringers');
     if (gameScore >= 500) checkAchievement('score_500');
     if (gameScore >= 1000) checkAchievement('score_1k');
     if (gameScore >= 5000) checkAchievement('score_5k');
     if (gameScore >= 10000) checkAchievement('score_10k');
+    if (gameScore >= 25000) checkAchievement('score_25k');
     if (accuracy >= 0.8 && gameRingsThrown >= 5) checkAchievement('accuracy_80');
     if (accuracy >= 1.0 && gameRingsThrown >= 5) checkAchievement('accuracy_100');
     if (save.stats.gamesPlayed >= 10) checkAchievement('games_10');
@@ -1194,17 +1682,52 @@ async function main() {
     if (save.stats.gamesPlayed >= 100) checkAchievement('games_100');
     if (save.stats.totalScore >= 10000) checkAchievement('total_10k');
     if (save.stats.totalScore >= 50000) checkAchievement('total_50k');
+    if (save.stats.totalScore >= 100000) checkAchievement('total_100k');
+    if (save.stats.totalScore >= 500000) checkAchievement('total_500k');
+    if (save.stats.totalPlayTime >= 3600) checkAchievement('play_time_1h');
+    if (save.stats.totalPlayTime >= 18000) checkAchievement('play_time_5h');
     if (gameMode === 'speed' && gameHits >= 10) checkAchievement('speed_10');
     if (gameMode === 'survival' && gameTimePlayed >= 30) checkAchievement('survival_30');
     if (gameMode === 'survival' && gameTimePlayed >= 60) checkAchievement('survival_60');
     if (new Set(trickShotsThisGame).size >= 3) checkAchievement('trick_3');
     if (new Set(trickShotsThisGame).size >= 6) checkAchievement('trick_all');
+    if (save.dailyStreak >= 14) checkAchievement('daily_14');
+    if (save.dailyStreak >= 30) checkAchievement('daily_30');
+    if (windEnabled && windStrength >= 2 && accuracy >= 1.0 && gameRingsThrown >= 5) checkAchievement('wind_perfect');
+    if (windDirsUsed.size >= 4) checkAchievement('wind_all_dirs');
 
+    // Mode-specific
+    if (gameMode === 'marathon') {
+      if (gameScore >= 5000) checkAchievement('marathon_score_5k');
+      if (gameScore >= 10000) checkAchievement('marathon_score_10k');
+    }
+    if (gameMode === 'carnival') {
+      checkAchievement('carnival_first');
+      if (save.stats.carnivalBonuses >= 3) checkAchievement('carnival_bonus_3');
+      if (gameScore >= 3000) checkAchievement('carnival_score_3k');
+      if (accuracy >= 1.0 && gameRingsThrown >= 5) checkAchievement('carnival_perfect');
+      if (gameBestCombo >= 8) checkAchievement('carnival_combo_8');
+    }
+    if (gameMode === 'precision') {
+      checkAchievement('precision_first');
+      if (accuracy >= 1.0 && gameRingsThrown >= 3) { save.stats.precisionPerfects++; checkAchievement('precision_perfect'); }
+      if (gameScore >= 1000) checkAchievement('precision_1k');
+      if (save.stats.precisionPerfects >= 3) checkAchievement('precision_streak');
+    }
+    if (gameMode === 'zen') {
+      if (gameTimePlayed >= 300) checkAchievement('zen_5min');
+      if (gameTimePlayed >= 600) checkAchievement('zen_10min');
+      if (gameRingsThrown >= 100) checkAchievement('zen_100rings');
+    }
+
+    // Skin unlock checks
+    const unlockedSkins = RING_SKINS.filter(s => s.condition(save)).length;
+    if (unlockedSkins >= 14) checkAchievement('all_skins');
+
+    // Daily
     if (gameMode === 'daily') {
       const today = new Date().toISOString().split('T')[0];
-      if (save.lastDaily === today) {
-        // Already played today
-      } else {
+      if (save.lastDaily !== today) {
         const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
         save.dailyStreak = (save.lastDaily === yesterday) ? save.dailyStreak + 1 : 1;
         save.lastDaily = today;
@@ -1214,7 +1737,7 @@ async function main() {
       checkAchievement('daily_done');
     }
 
-    // Leaderboard
+    // Leaderboard & history
     const entry: LeaderEntry = {
       score: gameScore, mode: gameMode, difficulty: gameDifficulty,
       rings: gameRingsThrown, accuracy: Math.round(accuracy * 100),
@@ -1224,9 +1747,10 @@ async function main() {
     save.highScores.sort((a, b) => b.score - a.score);
     if (save.highScores.length > 20) save.highScores.length = 20;
 
-    // XP
-    addXP(Math.floor(gameScore / 10) + gameHits * 5);
+    save.gameHistory.unshift(entry);
+    if (save.gameHistory.length > 100) save.gameHistory.length = 100;
 
+    addXP(Math.floor(gameScore / 10) + gameHits * 5);
     saveSave(save);
     audio.playSfx('gameOver');
 
@@ -1241,6 +1765,7 @@ async function main() {
     showPanel(gameOverEntity);
   }
 
+
   // ============================================================
   // UI PANELS (PanelUI)
   // ============================================================
@@ -1249,7 +1774,7 @@ async function main() {
 
   function createWorldPanel(config: string, x: number, y: number, z: number, w: number, h: number) {
     const e = world.createTransformEntity(undefined, { persistent: true });
-    e.object3D.position.set(x, y, z);
+    e.object3D!.position.set(x, y, z);
     e.addComponent(PanelUI, { config, maxWidth: w, maxHeight: h });
     panelEntities.push(e);
     return e;
@@ -1269,17 +1794,9 @@ async function main() {
     return e;
   }
 
-  function createScreenPanel(config: string, w: string, bottom: string, right: string, zOff: number, maxW: number, maxH: number) {
-    const e = world.createTransformEntity(undefined, { persistent: true });
-    e.addComponent(PanelUI, { config, maxWidth: maxW, maxHeight: maxH });
-    e.addComponent(ScreenSpace, { width: w, height: 'auto', bottom, right, zOffset: zOff });
-    panelEntities.push(e);
-    return e;
-  }
-
   // Panel entities
   const titleEntity = createWorldPanel('/ui/title.json', 0, 1.6, -2.5, 1.0, 1.2);
-  const modeEntity = createWorldPanel('/ui/modeselect.json', 0, 1.6, -2.5, 1.0, 1.2);
+  const modeEntity = createWorldPanel('/ui/modeselect.json', 0, 1.6, -2.5, 1.0, 1.4);
   const diffEntity = createWorldPanel('/ui/difficulty.json', 0, 1.6, -2.5, 0.8, 0.8);
   const hudEntity = createFollowerPanel('/ui/hud.json', 0.3, -0.12, -0.5, 0.35, 0.2);
   const powerEntity = createFollowerPanel('/ui/power.json', -0.3, -0.15, -0.5, 0.15, 0.05);
@@ -1289,29 +1806,28 @@ async function main() {
   const achieveEntity = createWorldPanel('/ui/achievements.json', 0, 1.6, -2.5, 1.0, 1.2);
   const settingsEntity = createWorldPanel('/ui/settings.json', 0, 1.6, -2.5, 0.9, 1.0);
   const statsEntity = createWorldPanel('/ui/stats.json', 0, 1.6, -2.5, 0.9, 1.0);
-  const skinsEntity = createWorldPanel('/ui/skins.json', 0, 1.6, -2.5, 0.9, 0.9);
-  const helpEntity = createWorldPanel('/ui/help.json', 0, 1.6, -2.5, 1.0, 1.2);
+  const skinsEntity = createWorldPanel('/ui/skins.json', 0, 1.6, -2.5, 0.9, 1.0);
+  const helpEntity = createWorldPanel('/ui/help.json', 0, 1.6, -2.5, 1.0, 1.4);
   const countdownEntity = createFollowerPanel('/ui/countdown.json', 0, 0, -0.6, 0.2, 0.15);
   const toastEntity = createFollowerPanel('/ui/toast.json', 0, 0.15, -0.5, 0.4, 0.08);
+  const puEntity = createFollowerPanel('/ui/powerups.json', -0.3, -0.05, -0.5, 0.2, 0.15);
+  const windEntity = createFollowerPanel('/ui/wind.json', 0.3, 0.05, -0.5, 0.2, 0.06);
+  const waveEntity = createFollowerPanel('/ui/wave.json', -0.3, 0.05, -0.5, 0.2, 0.1);
+  const challengeEntity = createWorldPanel('/ui/challenge.json', 0, 1.6, -2.5, 0.9, 1.2);
+  const historyEntity = createWorldPanel('/ui/history.json', 0, 1.6, -2.5, 1.0, 1.2);
 
   function hideAllPanels() {
     panelEntities.forEach(e => hidePanel(e));
   }
-
-  function showPanel(e: any) {
-    if (e.object3D) e.object3D.visible = true;
-  }
-
-  function hidePanel(e: any) {
-    if (e.object3D) e.object3D.visible = false;
-  }
+  function showPanel(e: any) { if (e?.object3D) e.object3D.visible = true; }
+  function hidePanel(e: any) { if (e?.object3D) e.object3D.visible = false; }
 
   function updatePanel(entity: any, id: string, text: string) {
     try {
       const doc = entity.getValue(PanelDocument, 'document') as UIKitDocument | undefined;
       if (doc) {
-        const el = doc.getElementById(id);
-        if (el) el.text.value = text;
+        const el = doc.getElementById(id) as any;
+        if (el && el.text) el.text.value = text;
       }
     } catch {}
   }
@@ -1324,17 +1840,43 @@ async function main() {
     updatePanel(hudEntity, 'hud-time', timeStr);
     updatePanel(hudEntity, 'hud-mode', gameMode.toUpperCase());
     updatePanel(hudEntity, 'hud-hits', String(gameHits));
+
+    // Wind indicator
+    if (windEnabled) {
+      updatePanel(windEntity, 'wind-dir', getWindArrow());
+      updatePanel(windEntity, 'wind-str', WIND_LABELS[Math.min(windStrength, 4)]);
+      showPanel(windEntity);
+    } else {
+      hidePanel(windEntity);
+    }
+
+    // Power-up indicator
+    if (nextPowerUp && (gameMode !== 'zen')) {
+      const def = POWER_UP_DEFS.find(p => p.type === nextPowerUp)!;
+      const stock = save.powerUpInventory[nextPowerUp] || 0;
+      updatePanel(puEntity, 'pu-name', stock > 0 ? def.name : 'EMPTY');
+      updatePanel(puEntity, 'pu-timer', slowmoActive ? Math.ceil(powerUpTimer) + 's' : '');
+      updatePanel(puEntity, 'pu-stock', stock > 0 ? 'Q: Use (' + stock + ')' : 'No stock');
+      showPanel(puEntity);
+    } else {
+      hidePanel(puEntity);
+    }
+
+    // Marathon wave
+    if (gameMode === 'marathon') {
+      showPanel(waveEntity);
+    } else {
+      hidePanel(waveEntity);
+    }
   }
 
   // ============================================================
-  // UI EVENT BINDING (deferred)
+  // UI EVENT BINDING
   // ============================================================
 
   let uiBound = false;
   function tryBindUI() {
     if (uiBound) return;
-
-    // Title buttons
     const titleDoc = titleEntity.getValue(PanelDocument, 'document') as UIKitDocument | undefined;
     if (!titleDoc) return;
 
@@ -1356,12 +1898,14 @@ async function main() {
     bind(titleEntity, 'btn-skins', () => { audio.playSfx('click'); gameState = 'skins'; refreshSkins(); hideAllPanels(); showPanel(skinsEntity); });
     bind(titleEntity, 'btn-settings', () => { audio.playSfx('click'); gameState = 'settings'; hideAllPanels(); showPanel(settingsEntity); });
     bind(titleEntity, 'btn-help', () => { audio.playSfx('click'); gameState = 'help'; hideAllPanels(); showPanel(helpEntity); });
+    bind(titleEntity, 'btn-history', () => { audio.playSfx('click'); gameState = 'history'; refreshHistory(); hideAllPanels(); showPanel(historyEntity); });
 
-    // Mode select
-    const modes: GameMode[] = ['classic', 'speed', 'target', 'distance', 'trick', 'daily', 'survival', 'practice'];
+    // Mode select - all 12 modes + custom
+    const modes: GameMode[] = ['classic', 'speed', 'target', 'distance', 'trick', 'daily', 'survival', 'practice', 'marathon', 'precision', 'carnival', 'zen'];
     modes.forEach(m => {
       bind(modeEntity, 'btn-' + m, () => { audio.playSfx('click'); gameMode = m; gameState = 'difficulty'; hideAllPanels(); showPanel(diffEntity); });
     });
+    bind(modeEntity, 'btn-custom', () => { audio.playSfx('click'); gameState = 'challenge'; refreshChallenge(); hideAllPanels(); showPanel(challengeEntity); });
 
     // Difficulty
     (['easy', 'medium', 'hard'] as Difficulty[]).forEach(d => {
@@ -1392,6 +1936,8 @@ async function main() {
       { ent: skinsEntity, btn: 'btn-skins-back' },
       { ent: helpEntity, btn: 'btn-help-back' },
       { ent: modeEntity, btn: 'btn-mode-back' },
+      { ent: historyEntity, btn: 'btn-hi-back' },
+      { ent: challengeEntity, btn: 'btn-ch-back' },
     ];
     backPanels.forEach(({ ent, btn }) => {
       bind(ent, btn, () => { audio.playSfx('click'); goToTitle(); });
@@ -1408,15 +1954,13 @@ async function main() {
         save.settings[vc.key] = Math.min(1, save.settings[vc.key] + 0.1);
         audio.setVolumes(save.settings.masterVol, save.settings.sfxVol, save.settings.musicVol);
         updatePanel(settingsEntity, vc.id, Math.round(save.settings[vc.key] * 100) + '%');
-        saveSave(save);
-        audio.playSfx('click');
+        saveSave(save); audio.playSfx('click');
       });
       bind(settingsEntity, vc.down, () => {
         save.settings[vc.key] = Math.max(0, save.settings[vc.key] - 0.1);
         audio.setVolumes(save.settings.masterVol, save.settings.sfxVol, save.settings.musicVol);
         updatePanel(settingsEntity, vc.id, Math.round(save.settings[vc.key] * 100) + '%');
-        saveSave(save);
-        audio.playSfx('click');
+        saveSave(save); audio.playSfx('click');
       });
     });
 
@@ -1424,26 +1968,19 @@ async function main() {
     bind(settingsEntity, 'btn-theme-prev', () => {
       save.settings.theme = (save.settings.theme - 1 + THEMES.length) % THEMES.length;
       updatePanel(settingsEntity, 'set-theme', THEMES[save.settings.theme].name);
-      applyTheme();
-      saveSave(save);
-      audio.playSfx('click');
+      applyTheme(); saveSave(save); audio.playSfx('click');
     });
     bind(settingsEntity, 'btn-theme-next', () => {
       save.settings.theme = (save.settings.theme + 1) % THEMES.length;
       updatePanel(settingsEntity, 'set-theme', THEMES[save.settings.theme].name);
-      applyTheme();
-      saveSave(save);
-      audio.playSfx('click');
+      applyTheme(); saveSave(save); audio.playSfx('click');
     });
 
-    // Skin buttons
-    for (let i = 0; i < 8; i++) {
+    // Skins (14 total)
+    for (let i = 0; i < 14; i++) {
       bind(skinsEntity, 'btn-skin-' + i, () => {
         if (RING_SKINS[i].condition(save)) {
-          save.skin = i;
-          saveSave(save);
-          refreshSkins();
-          audio.playSfx('click');
+          save.skin = i; saveSave(save); refreshSkins(); audio.playSfx('click');
         }
       });
     }
@@ -1452,10 +1989,34 @@ async function main() {
     bind(achieveEntity, 'btn-ach-prev', () => { achievePage = Math.max(0, achievePage - 1); refreshAchievements(); audio.playSfx('click'); });
     bind(achieveEntity, 'btn-ach-next', () => { achievePage = Math.min(Math.floor((ACHIEVEMENTS.length - 1) / 15), achievePage + 1); refreshAchievements(); audio.playSfx('click'); });
 
+    // History pagination
+    bind(historyEntity, 'btn-hi-prev', () => { historyPage = Math.max(0, historyPage - 1); refreshHistory(); audio.playSfx('click'); });
+    bind(historyEntity, 'btn-hi-next', () => {
+      historyPage = Math.min(Math.floor((save.gameHistory.length - 1) / 10), historyPage + 1);
+      refreshHistory(); audio.playSfx('click');
+    });
+
+    // Custom challenge controls
+    bind(challengeEntity, 'btn-ch-rings-up', () => { customRings = Math.min(50, customRings + 5); updatePanel(challengeEntity, 'ch-rings', String(customRings)); audio.playSfx('click'); });
+    bind(challengeEntity, 'btn-ch-rings-down', () => { customRings = Math.max(1, customRings - 5); updatePanel(challengeEntity, 'ch-rings', String(customRings)); audio.playSfx('click'); });
+    bind(challengeEntity, 'btn-ch-time-up', () => { customTime = Math.min(120, customTime + 15); updatePanel(challengeEntity, 'ch-time', customTime > 0 ? customTime + 's' : 'OFF'); audio.playSfx('click'); });
+    bind(challengeEntity, 'btn-ch-time-down', () => { customTime = Math.max(0, customTime - 15); updatePanel(challengeEntity, 'ch-time', customTime > 0 ? customTime + 's' : 'OFF'); audio.playSfx('click'); });
+    bind(challengeEntity, 'btn-ch-wind-up', () => { customWind = Math.min(4, customWind + 1); updatePanel(challengeEntity, 'ch-wind', customWind > 0 ? WIND_LABELS[customWind] : 'OFF'); audio.playSfx('click'); });
+    bind(challengeEntity, 'btn-ch-wind-down', () => { customWind = Math.max(0, customWind - 1); updatePanel(challengeEntity, 'ch-wind', customWind > 0 ? WIND_LABELS[customWind] : 'OFF'); audio.playSfx('click'); });
+    bind(challengeEntity, 'btn-ch-move', () => { customMovePegs = !customMovePegs; updatePanel(challengeEntity, 'btn-ch-move', customMovePegs ? 'ON' : 'OFF'); audio.playSfx('click'); });
+    bind(challengeEntity, 'btn-ch-power', () => { customPowerUps = !customPowerUps; updatePanel(challengeEntity, 'btn-ch-power', customPowerUps ? 'ON' : 'OFF'); audio.playSfx('click'); });
+    bind(challengeEntity, 'btn-ch-go', () => {
+      save.customSettings = { rings: customRings, time: customTime, wind: customWind, movePegs: customMovePegs, powerUps: customPowerUps };
+      saveSave(save);
+      audio.playSfx('click');
+      startGame('custom');
+    });
+
     uiBound = true;
   }
 
   let achievePage = 0;
+  let historyPage = 0;
 
   function refreshLeaderboard() {
     for (let i = 0; i < 10; i++) {
@@ -1509,8 +2070,9 @@ async function main() {
   }
 
   function refreshSkins() {
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 14; i++) {
       const s = RING_SKINS[i];
+      if (!s) continue;
       const unlocked = s.condition(save);
       const equipped = save.skin === i;
       const status = equipped ? 'EQUIPPED' : unlocked ? 'UNLOCKED' : s.unlock;
@@ -1519,13 +2081,41 @@ async function main() {
     }
   }
 
+  function refreshHistory() {
+    const start = historyPage * 10;
+    for (let i = 0; i < 10; i++) {
+      const idx = start + i;
+      const entry = save.gameHistory[idx];
+      if (entry) {
+        updatePanel(historyEntity, 'hi-idx-' + i, String(idx + 1));
+        updatePanel(historyEntity, 'hi-score-' + i, String(entry.score));
+        updatePanel(historyEntity, 'hi-mode-' + i, entry.mode.toUpperCase());
+        updatePanel(historyEntity, 'hi-acc-' + i, entry.accuracy + '%');
+        updatePanel(historyEntity, 'hi-date-' + i, entry.date);
+      } else {
+        updatePanel(historyEntity, 'hi-idx-' + i, '-');
+        updatePanel(historyEntity, 'hi-score-' + i, '-');
+        updatePanel(historyEntity, 'hi-mode-' + i, '-');
+        updatePanel(historyEntity, 'hi-acc-' + i, '-');
+        updatePanel(historyEntity, 'hi-date-' + i, '-');
+      }
+    }
+    const totalPages = Math.max(1, Math.ceil(save.gameHistory.length / 10));
+    updatePanel(historyEntity, 'hi-page', `${historyPage + 1}/${totalPages}`);
+  }
+
+  function refreshChallenge() {
+    updatePanel(challengeEntity, 'ch-rings', String(customRings));
+    updatePanel(challengeEntity, 'ch-time', customTime > 0 ? customTime + 's' : 'OFF');
+    updatePanel(challengeEntity, 'ch-wind', customWind > 0 ? WIND_LABELS[customWind] : 'OFF');
+  }
+
   function applyTheme() {
     const t = theme();
     world.scene.fog = new Fog(t.bg, 5, 20);
     world.scene.background = new Color(t.bg);
     accentLight1.color.set(t.accent);
     accentLight2.color.set(t.accent);
-    // Rebuild pegs with new colors
     buildPegs();
   }
 
@@ -1533,21 +2123,70 @@ async function main() {
     gameState = 'title';
     hideAllPanels();
     showPanel(titleEntity);
-
-    // Update title level display
     const title = XP_TITLES[Math.min(Math.floor((save.level - 1) / 2.5), 19)];
     updatePanel(titleEntity, 'title-level', 'Lv.' + save.level + ' ' + title);
   }
+
 
   // ============================================================
   // INPUT
   // ============================================================
 
-  const keyboard = world.input.keyboard;
+  const keyboard = (world.input as any).keyboard ?? world.input;
+
+  function doThrow() {
+    if (gameRingsLeft <= 0 && gameRingsLeft < 900) return;
+
+    const flags: { magnet?: boolean; ghost?: boolean; giant?: boolean; fire?: boolean; offsetX?: number } = {};
+
+    // Apply active power-up
+    if (activePowerUp === 'magnet') { flags.magnet = true; activePowerUp = null; save.stats.magnetPulls++; }
+    else if (activePowerUp === 'ghost') { flags.ghost = true; activePowerUp = null; }
+    else if (activePowerUp === 'giant') { flags.giant = true; activePowerUp = null; }
+    else if (activePowerUp === 'fire') { flags.fire = true; activePowerUp = null; }
+    else if (activePowerUp === 'multi') {
+      // Throw 3 rings
+      throwRing(chargePower, aimX, aimY, { offsetX: -0.1 });
+      throwRing(chargePower, aimX, aimY, { offsetX: 0.1 });
+      throwRing(chargePower, aimX, aimY, {});
+      save.stats.multiRingers++;
+      activePowerUp = null;
+      if (gameRingsLeft < 900) gameRingsLeft = Math.max(0, gameRingsLeft - 3);
+      // Wind changes on throw
+      windThrowCounter += 3;
+      if (windEnabled && windThrowCounter >= 3) { updateWind(); windThrowCounter = 0; }
+      updateHUD();
+      return;
+    }
+
+    throwRing(chargePower, aimX, aimY, flags);
+    if (gameRingsLeft < 900) gameRingsLeft--;
+
+    // Wind changes every 3 throws
+    windThrowCounter++;
+    if (windEnabled && windThrowCounter >= 3) { updateWind(); windThrowCounter = 0; }
+
+    // Precision mode: earn back rings on hits
+    // (checked in onRinger)
+
+    updateHUD();
+  }
+
+  function tryActivatePowerUp() {
+    if (!nextPowerUp) return;
+    if (gameMode === 'zen') return;
+    if (gameMode === 'custom' && !save.customSettings.powerUps) return;
+
+    const stock = save.powerUpInventory[nextPowerUp] || 0;
+    if (stock <= 0) return;
+
+    save.powerUpInventory[nextPowerUp]--;
+    activatePowerUp(nextPowerUp);
+  }
 
   function handleInput(dt: number) {
     if (gameState === 'playing') {
-      // Aim with mouse/keyboard
+      // Aim
       if (keyboard.getKeyPressed('ArrowLeft') || keyboard.getKeyPressed('KeyA')) {
         aimX = Math.max(-1, aimX - 2 * dt);
       }
@@ -1555,25 +2194,22 @@ async function main() {
         aimX = Math.min(1, aimX + 2 * dt);
       }
 
-      // Charge/throw with space
+      // Charge/throw
       if (keyboard.getKeyPressed('Space')) {
-        if (!isCharging) {
-          isCharging = true;
-          chargePower = 0;
-        }
+        if (!isCharging) { isCharging = true; chargePower = 0; }
         chargePower = Math.min(1, chargePower + dt * 1.2);
         updatePanel(powerEntity, 'power-bar', getPowerBar(chargePower));
         showPanel(powerEntity);
       } else if (isCharging) {
-        // Release - throw!
         isCharging = false;
-        if (gameRingsLeft > 0 || gameMode === 'practice' || gameMode === 'survival' || gameMode === 'speed') {
-          throwRing(chargePower, aimX, aimY);
-          if (gameRingsLeft < 900) gameRingsLeft--;
-          updateHUD();
-        }
+        doThrow();
         chargePower = 0;
         hidePanel(powerEntity);
+      }
+
+      // Power-up activation (Q key)
+      if (keyboard.getKeyDown('KeyQ')) {
+        tryActivatePowerUp();
       }
 
       // Pause
@@ -1590,14 +2226,9 @@ async function main() {
         showPanel(powerEntity);
       }
     } else if (gameState === 'gameOver') {
-      if (keyboard.getKeyDown('KeyR')) {
-        startGame(gameMode);
-      }
-      if (keyboard.getKeyDown('Escape')) {
-        goToTitle();
-      }
+      if (keyboard.getKeyDown('KeyR')) startGame(gameMode);
+      if (keyboard.getKeyDown('Escape')) goToTitle();
     } else if (gameState === 'title') {
-      // Quick start
       if (keyboard.getKeyDown('Space')) {
         gameState = 'modeSelect';
         hideAllPanels();
@@ -1610,32 +2241,27 @@ async function main() {
       const rightGP = (world.input as any).xr?.gamepads?.right;
       if (rightGP) {
         if (gameState === 'playing') {
-          // Thumbstick for aim
           const axes = rightGP.getAxesValues?.({ index: 0 });
           if (axes) aimX = Math.max(-1, Math.min(1, aimX + axes.x * 2 * dt));
 
-          // Trigger for charge/throw
           const triggerDown = rightGP.getButtonPressed?.({ index: 0 });
           if (triggerDown) {
-            if (!isCharging) {
-              isCharging = true;
-              chargePower = 0;
-            }
+            if (!isCharging) { isCharging = true; chargePower = 0; }
             chargePower = Math.min(1, chargePower + dt * 1.2);
             updatePanel(powerEntity, 'power-bar', getPowerBar(chargePower));
             showPanel(powerEntity);
           } else if (isCharging) {
             isCharging = false;
-            if (gameRingsLeft > 0 || gameMode === 'practice' || gameMode === 'survival' || gameMode === 'speed') {
-              throwRing(chargePower, aimX, aimY);
-              if (gameRingsLeft < 900) gameRingsLeft--;
-              updateHUD();
-            }
+            doThrow();
             chargePower = 0;
             hidePanel(powerEntity);
           }
 
-          // B for pause
+          // A button: power-up
+          const aDown = rightGP.getButtonDown?.({ index: 3 });
+          if (aDown) tryActivatePowerUp();
+
+          // B button: pause
           const bDown = rightGP.getButtonDown?.({ index: 4 });
           if (bDown) {
             gameState = 'paused';
@@ -1686,17 +2312,21 @@ async function main() {
 
     let px = aimX * 0.3, py = 1.2, pz = -0.3;
     let vx = aimX * 1.5, vy = upSpeed, vz = -speed;
-    const dt = 0.05;
+    const simDt = 0.05;
 
     for (let i = 0; i < 30; i++) {
-      px += vx * dt;
-      py += vy * dt;
-      pz += vz * dt;
-      vy -= 6.0 * dt;
+      // Apply wind to simulation
+      if (windEnabled) {
+        vx += windX * simDt * 0.5;
+        vz += windZ * simDt * 0.3;
+      }
+      px += vx * simDt;
+      py += vy * simDt;
+      pz += vz * simDt;
+      vy -= 6.0 * simDt;
 
       aimDots[i].position.set(px, py, pz);
       (aimDots[i].material as MeshBasicMaterial).opacity = 0.3 * (1 - i / 30);
-
       if (py < 0) break;
     }
   }
@@ -1712,7 +2342,6 @@ async function main() {
     const dt = Math.min((now - lastTime) / 1000, 0.05);
     lastTime = now;
 
-    // Try to bind UI on first frames
     if (!uiBound) tryBindUI();
 
     // Countdown
@@ -1747,52 +2376,62 @@ async function main() {
       // Combo decay
       if (gameCombo > 0) {
         comboDecayTimer -= dt;
-        if (comboDecayTimer <= 0) {
-          gameCombo = 0;
-          updateHUD();
-        }
+        if (comboDecayTimer <= 0) { gameCombo = 0; updateHUD(); }
       }
 
       // Timer modes
       if (gameTimeLeft > 0) {
         gameTimeLeft -= dt;
         updateHUD();
-        if (gameTimeLeft <= 0) {
-          gameTimeLeft = 0;
-          endGame();
-          return;
-        }
-        // Warning beeps
-        if (gameTimeLeft <= 5 && Math.floor(gameTimeLeft) !== Math.floor(gameTimeLeft + dt)) {
-          audio.playSfx('countdown');
-        }
+        if (gameTimeLeft <= 0) { gameTimeLeft = 0; endGame(); return; }
+        if (gameTimeLeft <= 5 && Math.floor(gameTimeLeft) !== Math.floor(gameTimeLeft + dt)) audio.playSfx('countdown');
+      }
+
+      // Power-up timer (slow-mo)
+      if (slowmoActive) {
+        powerUpTimer -= dt;
+        updatePanel(puEntity, 'pu-timer', Math.ceil(powerUpTimer) + 's');
+        if (powerUpTimer <= 0) { slowmoActive = false; activePowerUp = null; showToast('Slow-Mo ended'); }
       }
 
       // Check if out of rings
       if (gameRingsLeft <= 0 && gameRingsLeft < 900) {
-        // Wait for all rings to land
         if (flyingRings.every(r => !r.active)) {
-          endGame();
-          return;
+          // Marathon: advance wave instead of ending
+          if (gameMode === 'marathon') {
+            advanceMarathonWave();
+          } else if (gameMode === 'precision') {
+            // Precision: if you hit all, earn more rings
+            if (gameMisses === 0 && gameHits > 0 && gameRingsThrown === gameHits) {
+              gameRingsLeft = 3; // bonus round
+              showToast('PERFECT! +3 RINGS');
+            } else {
+              endGame();
+              return;
+            }
+          } else {
+            endGame();
+            return;
+          }
         }
       }
 
-      // Survival: miss 3 times and game over
-      if (gameMode === 'survival' && gameMisses >= 3) {
-        endGame();
-        return;
+      // Survival miss limit
+      if (gameMode === 'survival' && gameMisses >= 3) { endGame(); return; }
+
+      // Moving pegs
+      const t = now / 1000;
+      for (const pm of pegMeshes) {
+        if (pm.def.moving && pm.def.baseX !== undefined) {
+          pm.mesh.position.x = pm.def.baseX + Math.sin(t * pm.def.moveSpeed! + pm.def.movePhase!) * pm.def.moveAmplitude!;
+        }
       }
     } else {
       handleInput(dt);
     }
 
     // Toast timer
-    if (toastTimer > 0) {
-      toastTimer -= dt;
-      if (toastTimer <= 0) {
-        hidePanel(toastEntity);
-      }
-    }
+    if (toastTimer > 0) { toastTimer -= dt; if (toastTimer <= 0) hidePanel(toastEntity); }
 
     // Particle update
     particles.update(dt);
@@ -1810,7 +2449,6 @@ async function main() {
       m.position.x += (m as any)._vx * dt;
       m.position.y += (m as any)._vy * dt;
       (m.material as MeshBasicMaterial).opacity = 0.15 + 0.15 * Math.sin(t * 0.5 + (m as any)._phase);
-      // Wrap
       if (m.position.x > 7) m.position.x = -7;
       if (m.position.x < -7) m.position.x = 7;
     });
@@ -1820,15 +2458,24 @@ async function main() {
       const intensity = 0.1 + 0.08 * Math.sin(t * 2 + p.def.x * 5);
       (p.glowMesh.material as MeshBasicMaterial).opacity = p.def === targetPeg ? 0.4 + 0.2 * Math.sin(t * 4) : intensity;
     });
+
+    // Combo intensity: lights pulse brighter with combo
+    const comboIntensity = Math.min(gameCombo / 10, 1);
+    comboLight.intensity = comboIntensity * 0.8;
+    comboLight.color.set(gameCombo >= 8 ? '#ffcc00' : gameCombo >= 5 ? '#ff8800' : theme().accent);
+
+    // Slow-mo visual: accent light flicker
+    if (slowmoActive) {
+      accentLight1.intensity = 0.3 + 0.3 * Math.sin(t * 8);
+      accentLight2.intensity = 0.2 + 0.2 * Math.sin(t * 8 + 1);
+    } else {
+      accentLight1.intensity = 0.6;
+      accentLight2.intensity = 0.4;
+    }
   };
 
-  // Use world's built-in update loop
   (world as any).onUpdate = update;
-  // Fallback: manual rAF loop if onUpdate doesn't work
-  function loop() {
-    update();
-    requestAnimationFrame(loop);
-  }
+  function loop() { update(); requestAnimationFrame(loop); }
   requestAnimationFrame(loop);
 
   // Initial state
@@ -1836,7 +2483,6 @@ async function main() {
   showPanel(titleEntity);
   goToTitle();
 
-  // Settings initial values
   setTimeout(() => {
     updatePanel(settingsEntity, 'set-master', Math.round(save.settings.masterVol * 100) + '%');
     updatePanel(settingsEntity, 'set-sfx', Math.round(save.settings.sfxVol * 100) + '%');

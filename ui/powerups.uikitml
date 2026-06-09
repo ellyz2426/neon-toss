@@ -1,0 +1,14 @@
+<!-- ui/powerups.uikitml -->
+<style>
+  .panel { display: flex; flex-direction: column; padding: 0.5; background-color: rgba(0,0,0,0.6); border-color: #ff33ff; border-width: 0.05; border-radius: 0.4; align-items: center; gap: 0.2; }
+  .label { font-size: 0.8; color: #ff33ff; }
+  .name { font-size: 1.2; color: #ff33ff; font-weight: bold; }
+  .timer { font-size: 1; color: #ffcc00; }
+  .stock { font-size: 0.9; color: #888888; }
+</style>
+<div class="panel">
+  <span class="label">POWER-UP</span>
+  <span id="pu-name" class="name">NONE</span>
+  <span id="pu-timer" class="timer"></span>
+  <span id="pu-stock" class="stock">Q: Activate</span>
+</div>

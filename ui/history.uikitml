@@ -1,0 +1,36 @@
+<!-- ui/history.uikitml -->
+<style>
+  .panel { display: flex; flex-direction: column; padding: 1.5; background-color: rgba(0,0,0,0.85); border-color: #00ffff; border-width: 0.1; border-radius: 1; gap: 0.3; align-items: center; }
+  .title { font-size: 2.5; color: #00ffff; font-weight: bold; }
+  .row { display: flex; flex-direction: row; gap: 0.6; }
+  .header { font-size: 1; color: #888888; font-weight: bold; }
+  .idx { font-size: 0.9; color: #555555; }
+  .score { font-size: 0.9; color: #00ffff; }
+  .mode { font-size: 0.9; color: #888888; }
+  .acc { font-size: 0.9; color: #33ff33; }
+  .date { font-size: 0.9; color: #555555; }
+  .nav { display: flex; flex-direction: row; gap: 1; }
+  .btn { font-size: 1.2; color: #00ffff; background-color: rgba(0,255,255,0.1); padding-top: 0.2; padding-bottom: 0.2; padding-left: 1; padding-right: 1; border-color: #00ffff; border-width: 0.03; border-radius: 0.3; cursor: pointer; }
+  .page { font-size: 1; color: #888888; }
+  .back { font-size: 1.4; color: #888888; background-color: rgba(128,128,128,0.1); padding-top: 0.3; padding-bottom: 0.3; padding-left: 1.5; padding-right: 1.5; border-color: #555555; border-width: 0.05; border-radius: 0.5; cursor: pointer; }
+</style>
+<div class="panel">
+  <span class="title">GAME HISTORY</span>
+  <div class="row"><span class="header">#</span><span class="header">SCORE</span><span class="header">MODE</span><span class="header">ACC</span><span class="header">DATE</span></div>
+  <div class="row"><span id="hi-idx-0" class="idx">-</span><span id="hi-score-0" class="score">-</span><span id="hi-mode-0" class="mode">-</span><span id="hi-acc-0" class="acc">-</span><span id="hi-date-0" class="date">-</span></div>
+  <div class="row"><span id="hi-idx-1" class="idx">-</span><span id="hi-score-1" class="score">-</span><span id="hi-mode-1" class="mode">-</span><span id="hi-acc-1" class="acc">-</span><span id="hi-date-1" class="date">-</span></div>
+  <div class="row"><span id="hi-idx-2" class="idx">-</span><span id="hi-score-2" class="score">-</span><span id="hi-mode-2" class="mode">-</span><span id="hi-acc-2" class="acc">-</span><span id="hi-date-2" class="date">-</span></div>
+  <div class="row"><span id="hi-idx-3" class="idx">-</span><span id="hi-score-3" class="score">-</span><span id="hi-mode-3" class="mode">-</span><span id="hi-acc-3" class="acc">-</span><span id="hi-date-3" class="date">-</span></div>
+  <div class="row"><span id="hi-idx-4" class="idx">-</span><span id="hi-score-4" class="score">-</span><span id="hi-mode-4" class="mode">-</span><span id="hi-acc-4" class="acc">-</span><span id="hi-date-4" class="date">-</span></div>
+  <div class="row"><span id="hi-idx-5" class="idx">-</span><span id="hi-score-5" class="score">-</span><span id="hi-mode-5" class="mode">-</span><span id="hi-acc-5" class="acc">-</span><span id="hi-date-5" class="date">-</span></div>
+  <div class="row"><span id="hi-idx-6" class="idx">-</span><span id="hi-score-6" class="score">-</span><span id="hi-mode-6" class="mode">-</span><span id="hi-acc-6" class="acc">-</span><span id="hi-date-6" class="date">-</span></div>
+  <div class="row"><span id="hi-idx-7" class="idx">-</span><span id="hi-score-7" class="score">-</span><span id="hi-mode-7" class="mode">-</span><span id="hi-acc-7" class="acc">-</span><span id="hi-date-7" class="date">-</span></div>
+  <div class="row"><span id="hi-idx-8" class="idx">-</span><span id="hi-score-8" class="score">-</span><span id="hi-mode-8" class="mode">-</span><span id="hi-acc-8" class="acc">-</span><span id="hi-date-8" class="date">-</span></div>
+  <div class="row"><span id="hi-idx-9" class="idx">-</span><span id="hi-score-9" class="score">-</span><span id="hi-mode-9" class="mode">-</span><span id="hi-acc-9" class="acc">-</span><span id="hi-date-9" class="date">-</span></div>
+  <div class="nav">
+    <div id="btn-hi-prev" class="btn">PREV</div>
+    <span id="hi-page" class="page">1/1</span>
+    <div id="btn-hi-next" class="btn">NEXT</div>
+  </div>
+  <div id="btn-hi-back" class="back">BACK</div>
+</div>
