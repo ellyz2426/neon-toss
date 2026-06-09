@@ -20,10 +20,9 @@ type GameState = 'title' | 'modeSelect' | 'difficulty' | 'playing' | 'paused' |
   'skins' | 'help' | 'countdown' | 'history' | 'challenge';
 
 type GameMode = 'classic' | 'speed' | 'target' | 'distance' | 'trick' | 'daily' |
-  'survival' | 'practice' | 'marathon' | 'precision' | 'carnival' | 'zen' |
-  'ricochet' | 'elimination' | 'custom';
+  'survival' | 'practice' | 'marathon' | 'precision' | 'carnival' | 'zen' | 'custom';
 type Difficulty = 'easy' | 'medium' | 'hard';
-type PowerUpType = 'multi' | 'magnet' | 'fire' | 'giant' | 'ghost' | 'slowmo' | 'laser' | 'bounce';
+type PowerUpType = 'multi' | 'magnet' | 'fire' | 'giant' | 'ghost' | 'slowmo';
 
 interface PegDef {
   x: number; z: number; height: number; points: number; radius: number;
@@ -78,9 +77,6 @@ interface SaveData {
     multiRingers: number; slowmoRingers: number;
     bestMarathonWave: number; precisionPerfects: number;
     zenMinutes: number;
-    ricochetBounceScores: number; eliminationClears: number;
-    laserAims: number; bounceRingers: number;
-    frenzyBonuses: number; boardClears: number;
   };
   settings: {
     masterVol: number; sfxVol: number; musicVol: number;
@@ -116,49 +112,6 @@ const PEG_LAYOUTS: PegDef[][] = [
 
 const ALL_PEGS = PEG_LAYOUTS.flat();
 
-// Alternate peg arrangements for variety
-const PEG_LAYOUTS_DIAMOND: PegDef[] = [
-  { x: 0.0, z: -2.0, height: 0.35, points: 10, radius: 0.04 },
-  { x: -0.35, z: -2.8, height: 0.38, points: 25, radius: 0.035 },
-  { x: 0.35, z: -2.8, height: 0.38, points: 25, radius: 0.035 },
-  { x: -0.6, z: -3.5, height: 0.42, points: 25, radius: 0.035 },
-  { x: 0.0, z: -3.5, height: 0.42, points: 50, radius: 0.03 },
-  { x: 0.6, z: -3.5, height: 0.42, points: 25, radius: 0.035 },
-  { x: -0.35, z: -4.2, height: 0.45, points: 50, radius: 0.03 },
-  { x: 0.35, z: -4.2, height: 0.45, points: 50, radius: 0.03 },
-  { x: 0.0, z: -5.0, height: 0.5, points: 100, radius: 0.025 },
-];
-
-const PEG_LAYOUTS_CIRCLE: PegDef[] = [];
-for (let i = 0; i < 6; i++) {
-  const angle = (i / 6) * Math.PI * 2;
-  PEG_LAYOUTS_CIRCLE.push({
-    x: Math.cos(angle) * 0.5, z: -3.0 + Math.sin(angle) * 0.5,
-    height: 0.38, points: 25, radius: 0.035,
-  });
-}
-PEG_LAYOUTS_CIRCLE.push({ x: 0, z: -3.0, height: 0.5, points: 100, radius: 0.025 });
-for (let i = 0; i < 4; i++) {
-  const angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
-  PEG_LAYOUTS_CIRCLE.push({
-    x: Math.cos(angle) * 1.0, z: -3.0 + Math.sin(angle) * 1.0,
-    height: 0.35, points: 10, radius: 0.04,
-  });
-}
-
-const PEG_LAYOUTS_ZIGZAG: PegDef[] = [
-  { x: -0.4, z: -1.8, height: 0.35, points: 10, radius: 0.04 },
-  { x: 0.3, z: -2.3, height: 0.37, points: 10, radius: 0.04 },
-  { x: -0.3, z: -2.8, height: 0.39, points: 25, radius: 0.035 },
-  { x: 0.4, z: -3.3, height: 0.41, points: 25, radius: 0.035 },
-  { x: -0.2, z: -3.8, height: 0.43, points: 50, radius: 0.03 },
-  { x: 0.2, z: -4.3, height: 0.46, points: 50, radius: 0.03 },
-  { x: 0.0, z: -4.8, height: 0.5, points: 100, radius: 0.025 },
-];
-
-const ALTERNATE_LAYOUTS = [ALL_PEGS, PEG_LAYOUTS_DIAMOND, PEG_LAYOUTS_CIRCLE, PEG_LAYOUTS_ZIGZAG];
-const LAYOUT_NAMES = ['Standard', 'Diamond', 'Circle', 'Zigzag'];
-
 const THEMES: Theme[] = [
   { name: 'Neon Holodeck', grid: '#00ffff', accent: '#00ffff', bg: '#050510', fog: '#050510', wall: '#001a1a', peg: '#00cccc', ring: '#00ffff', glow: '#00ffff' },
   { name: 'Crimson Arena', grid: '#ff3344', accent: '#ff3344', bg: '#100505', fog: '#100505', wall: '#1a0000', peg: '#cc2233', ring: '#ff3344', glow: '#ff3344' },
@@ -187,11 +140,6 @@ const RING_SKINS: RingSkin[] = [
   { name: 'Forest', color: '#22aa44', emissive: '#116622', glow: '#33cc55', unlock: '5 wind ringers', condition: s => s.stats.windRingers >= 5 },
   { name: 'Cosmic', color: '#cc44ff', emissive: '#8822aa', glow: '#dd66ff', unlock: 'Carnival bonus x3', condition: s => s.stats.carnivalBonuses >= 3 },
   { name: 'Hologram', color: '#88ffcc', emissive: '#55aa88', glow: '#aaffdd', unlock: 'All 12 modes', condition: s => s.stats.modesPlayed.length >= 12 },
-  { name: 'Diamond', color: '#eeeeff', emissive: '#aaaacc', glow: '#ffffff', unlock: 'Level 30', condition: s => s.level >= 30 },
-  { name: 'Neon Rose', color: '#ff66aa', emissive: '#cc3377', glow: '#ff88cc', unlock: '200 ringers', condition: s => s.stats.ringerCount >= 200 },
-  { name: 'Thunder', color: '#ffff33', emissive: '#cccc00', glow: '#ffff66', unlock: 'x8 combo in ricochet', condition: s => s.stats.ricochetBounceScores >= 20 },
-  { name: 'Obsidian', color: '#333344', emissive: '#222233', glow: '#555566', unlock: '3 board clears', condition: s => s.stats.boardClears >= 3 },
-  { name: 'Aurora', color: '#44ffaa', emissive: '#22cc77', glow: '#66ffcc', unlock: 'All 14 modes', condition: s => s.stats.modesPlayed.length >= 14 },
 ];
 
 const POWER_UP_DEFS: PowerUpDef[] = [
@@ -201,8 +149,6 @@ const POWER_UP_DEFS: PowerUpDef[] = [
   { type: 'giant', name: 'GIANT', desc: '2x ring size', color: '#ffcc00', duration: 0 },
   { type: 'ghost', name: 'GHOST', desc: 'Pass through to peg behind', color: '#aaddff', duration: 0 },
   { type: 'slowmo', name: 'SLOW-MO', desc: 'Slow time for 5 seconds', color: '#33ff88', duration: 5 },
-  { type: 'laser', name: 'LASER AIM', desc: 'Perfect aim guide for 8 seconds', color: '#ff0000', duration: 8 },
-  { type: 'bounce', name: 'BOUNCE RING', desc: 'Ring bounces extra to hit more pegs', color: '#ff88ff', duration: 0 },
 ];
 
 const ACHIEVEMENTS: Achievement[] = [
@@ -319,51 +265,6 @@ const ACHIEVEMENTS: Achievement[] = [
   { id: 'play_time_1h', name: 'Hour Player', desc: 'Accumulate 1 hour of play time' },
   { id: 'play_time_5h', name: 'Five Hours', desc: 'Accumulate 5 hours of play time' },
   { id: 'combo_perfect_10', name: 'Perfect Ten', desc: 'x10 combo on golden peg ringer' },
-  // Ricochet achievements (106-115)
-  { id: 'ricochet_first', name: 'Bouncer', desc: 'Complete a Ricochet game' },
-  { id: 'ricochet_bounce_5', name: 'Bank Shot', desc: '5 bounce-ringers in one Ricochet game' },
-  { id: 'ricochet_bounce_10', name: 'Pinball Wizard', desc: '10 bounce-ringers in one Ricochet game' },
-  { id: 'ricochet_score_3k', name: 'Ricochet Gold', desc: 'Score 3K in Ricochet mode' },
-  { id: 'ricochet_combo_5', name: 'Bounce Streak', desc: 'x5 combo from ricochets only' },
-  { id: 'ricochet_golden_bounce', name: 'Golden Bounce', desc: 'Bounce to the golden peg' },
-  { id: 'ricochet_double_bounce', name: 'Double Bank', desc: 'Bounce off 2 pegs then ringer a 3rd' },
-  { id: 'ricochet_triple', name: 'Triple Ricochet', desc: 'Ring 3 pegs via bouncing in one throw' },
-  { id: 'ricochet_perfect', name: 'Clean Bouncer', desc: '100% accuracy in Ricochet (5+ rings)' },
-  { id: 'ricochet_20_total', name: 'Bounce Master', desc: '20 total Ricochet bounce-scores' },
-  // Elimination achievements (116-125)
-  { id: 'elim_first', name: 'Eliminator', desc: 'Complete an Elimination game' },
-  { id: 'elim_clear', name: 'Board Clear', desc: 'Ring every peg in Elimination' },
-  { id: 'elim_3_clears', name: 'Sweep Master', desc: 'Clear 3 boards in Elimination' },
-  { id: 'elim_fast_clear', name: 'Speed Sweep', desc: 'Clear board in 6 or fewer rings' },
-  { id: 'elim_no_miss', name: 'Perfect Clear', desc: 'Clear board with 0 misses' },
-  { id: 'elim_score_5k', name: 'Elim Grand', desc: 'Score 5K in Elimination' },
-  { id: 'elim_golden_first', name: 'Golden Start', desc: 'Ring golden peg first in Elimination' },
-  { id: 'elim_combo_clear', name: 'Combo Clear', desc: 'Clear board with active combo (3+)' },
-  { id: 'elim_3_no_miss', name: 'Flawless Sweep', desc: '3 perfect clears in one session' },
-  { id: 'elim_chain_3', name: 'Chain Clear', desc: 'Clear 3 boards in one Elimination run' },
-  // New power-up achievements (126-135)
-  { id: 'pu_laser_first', name: 'Laser Focus', desc: 'Use Laser Aim power-up' },
-  { id: 'pu_laser_golden', name: 'Laser Snipe', desc: 'Ring golden peg with Laser Aim active' },
-  { id: 'pu_laser_3', name: 'Precision Strike', desc: '3 ringers during one Laser Aim' },
-  { id: 'pu_bounce_first', name: 'Bouncy Ring', desc: 'Use Bounce Ring power-up' },
-  { id: 'pu_bounce_multi', name: 'Bounce Frenzy', desc: 'Ring 3+ pegs with one Bounce Ring' },
-  { id: 'pu_bounce_golden', name: 'Bounce to Gold', desc: 'Bounce Ring reaches golden peg' },
-  { id: 'pu_all_8', name: 'Full Arsenal', desc: 'Use all 8 power-up types' },
-  { id: 'pu_100', name: 'Power Century', desc: 'Use 100 power-ups total' },
-  { id: 'pu_laser_combo', name: 'Laser Streak', desc: 'x5 combo during Laser Aim' },
-  { id: 'pu_bounce_chain', name: 'Chain Bounce', desc: 'Bounce Ring hits 4+ pegs' },
-  // Frenzy achievements (136-140)
-  { id: 'frenzy_first', name: 'Frenzy!', desc: 'Score during a Score Frenzy event' },
-  { id: 'frenzy_5', name: 'Frenzy Hunter', desc: 'Score in 5 separate frenzy events' },
-  { id: 'frenzy_golden', name: 'Golden Frenzy', desc: 'Ring golden peg during frenzy' },
-  { id: 'frenzy_combo_8', name: 'Frenzy Combo', desc: 'x8 combo during frenzy' },
-  { id: 'frenzy_10', name: 'Frenzy Addict', desc: 'Score in 10 frenzy events total' },
-  // Board layout achievements (141-145)
-  { id: 'layout_diamond', name: 'Diamond Player', desc: 'Play on Diamond layout' },
-  { id: 'layout_circle', name: 'Circle Player', desc: 'Play on Circle layout' },
-  { id: 'layout_zigzag', name: 'Zigzag Player', desc: 'Play on Zigzag layout' },
-  { id: 'layout_all', name: 'Layout Explorer', desc: 'Play on all 4 board layouts' },
-  { id: 'trail_master', name: 'Trail Blazer', desc: 'Throw 500 total rings' },
 ];
 
 const XP_TITLES = [
@@ -409,14 +310,11 @@ function defaultSave(): SaveData {
       multiRingers: 0, slowmoRingers: 0,
       bestMarathonWave: 0, precisionPerfects: 0,
       zenMinutes: 0,
-      ricochetBounceScores: 0, eliminationClears: 0,
-      laserAims: 0, bounceRingers: 0,
-      frenzyBonuses: 0, boardClears: 0,
     },
     settings: { masterVol: 0.8, sfxVol: 0.8, musicVol: 0.5, theme: 0, difficulty: 'medium' },
     skin: 0, xp: 0, level: 1,
     dailyStreak: 0, lastDaily: '',
-    powerUpInventory: { multi: 3, magnet: 3, fire: 2, giant: 3, ghost: 2, slowmo: 2, laser: 2, bounce: 3 },
+    powerUpInventory: { multi: 3, magnet: 3, fire: 2, giant: 3, ghost: 2, slowmo: 2 },
     customSettings: { rings: 10, time: 0, wind: 0, movePegs: false, powerUps: false },
   };
 }
@@ -1025,9 +923,6 @@ async function main() {
     ghostPassed: number;
     isGiant: boolean;
     isFire: boolean;
-    isBounce: boolean;
-    bounceCount: number;
-    trailLine: Line | null;
   }
 
   const flyingRings: FlyingRing[] = [];
@@ -1067,12 +962,11 @@ async function main() {
 
   function throwRing(power: number, aimXVal: number, aimYVal: number, flags?: {
     magnet?: boolean; ghost?: boolean; giant?: boolean; fire?: boolean; offsetX?: number;
-    bounce?: boolean;
   }) {
     const f = flags || {};
     const ring = createRingMesh(
       f.giant,
-      f.fire ? '#ff4400' : f.ghost ? '#aaddff88' : f.magnet ? '#4488ff' : f.bounce ? '#ff88ff' : undefined,
+      f.fire ? '#ff4400' : f.ghost ? '#aaddff88' : f.magnet ? '#4488ff' : undefined,
     );
     const ox = f.offsetX || 0;
     ring.position.set(aimXVal * 0.3 + ox, 1.2, -0.3);
@@ -1080,16 +974,6 @@ async function main() {
 
     const speed = 3 + power * 5;
     const upSpeed = 2 + power * 2;
-
-    // Create trail line
-    const trailGeo = new BufferGeometry();
-    const trailPositions = new Float32Array(75); // 25 points * 3
-    trailGeo.setAttribute('position', new Float32BufferAttribute(trailPositions, 3));
-    const trailMat = new LineBasicMaterial({
-      color: skinDef().glow, transparent: true, opacity: 0.4, blending: AdditiveBlending,
-    });
-    const trailLine = new Line(trailGeo, trailMat);
-    world.scene.add(trailLine);
 
     const fr: FlyingRing = {
       group: ring,
@@ -1105,9 +989,6 @@ async function main() {
       ghostPassed: 0,
       isGiant: !!f.giant,
       isFire: !!f.fire,
-      isBounce: !!f.bounce,
-      bounceCount: 0,
-      trailLine,
     };
     flyingRings.push(fr);
     audio.playSfx('throw');
@@ -1159,22 +1040,6 @@ async function main() {
       fr.trail.push(fr.group.position.clone());
       if (fr.trail.length > 25) fr.trail.shift();
 
-      // Update trail line VFX
-      if (fr.trailLine && fr.trail.length > 1) {
-        const posAttr = fr.trailLine.geometry.getAttribute('position') as any;
-        for (let ti = 0; ti < 25; ti++) {
-          if (ti < fr.trail.length) {
-            posAttr.setXYZ(ti, fr.trail[ti].x, fr.trail[ti].y, fr.trail[ti].z);
-          } else {
-            const last = fr.trail[fr.trail.length - 1];
-            posAttr.setXYZ(ti, last.x, last.y, last.z);
-          }
-        }
-        posAttr.needsUpdate = true;
-        fr.trailLine.geometry.setDrawRange(0, fr.trail.length);
-        (fr.trailLine.material as LineBasicMaterial).opacity = fr.active ? 0.4 : Math.max(0, 0.4 - fr.age * 0.5);
-      }
-
       const ringRadius = fr.isGiant ? 0.16 : 0.08;
       const encircleRange = fr.isGiant ? 0.24 : 0.12;
       const directHitRange = fr.isGiant ? 0.12 : 0.06;
@@ -1196,49 +1061,11 @@ async function main() {
               continue;
             }
             // Bounce off peg body
-            if (fr.isBounce && fr.bounceCount < 4) {
-              // Bounce ring: redirect toward another peg instead of just bouncing
-              fr.bounceCount++;
-              const otherPeg = activePegs.find(p => p !== peg && Math.abs(p.x - pegX) + Math.abs(p.z - peg.z) > 0.3);
-              if (otherPeg) {
-                const tdx = otherPeg.x - fr.group.position.x;
-                const tdz = otherPeg.z - fr.group.position.z;
-                const tDist = Math.sqrt(tdx*tdx + tdz*tdz);
-                fr.vx = (tdx / tDist) * 3;
-                fr.vz = (tdz / tDist) * 3;
-                fr.vy = 1.5;
-              } else {
-                fr.vx += dx * 3;
-                fr.vz += dz * 3;
-                fr.vy *= -0.3;
-              }
-              fr.bounced = true;
-              audio.playSfx('bounce');
-              // Ricochet mode: bouncing scores bonus
-              if (gameMode === 'ricochet') {
-                const bouncePoints = Math.floor(peg.points * 0.5) * Math.min(fr.bounceCount, 5);
-                gameScore += bouncePoints;
-                save.stats.ricochetBounceScores++;
-                showToast('BOUNCE +' + bouncePoints);
-                particles.emit(fr.group.position.x, fr.group.position.y, fr.group.position.z, 10, '#ff88ff', 1.5, 0.4);
-                checkAchievement('ricochet_bounce_5');
-                if (save.stats.ricochetBounceScores >= 20) checkAchievement('ricochet_20_total');
-              }
-            } else {
-              fr.vx += dx * 3;
-              fr.vz += dz * 3;
-              fr.vy *= -0.3;
-              fr.bounced = true;
-              audio.playSfx('bounce');
-              // Ricochet mode bounce scoring (non-power-up)
-              if (gameMode === 'ricochet') {
-                const bouncePoints = Math.floor(peg.points * 0.5);
-                gameScore += bouncePoints;
-                save.stats.ricochetBounceScores++;
-                showToast('BOUNCE +' + bouncePoints);
-                particles.emit(fr.group.position.x, fr.group.position.y, fr.group.position.z, 8, '#ff88ff', 1.2, 0.3);
-              }
-            }
+            fr.vx += dx * 3;
+            fr.vz += dz * 3;
+            fr.vy *= -0.3;
+            fr.bounced = true;
+            audio.playSfx('bounce');
           } else if (dist2D < encircleRange && ringY < peg.height - 0.05) {
             // RINGER!
             fr.active = false;
@@ -1301,10 +1128,7 @@ async function main() {
 
     // Cleanup
     for (let i = flyingRings.length - 1; i >= 0; i--) {
-      if (!flyingRings[i].active && flyingRings[i].age > 3) {
-        if (flyingRings[i].trailLine) world.scene.remove(flyingRings[i].trailLine!);
-        flyingRings.splice(i, 1);
-      }
+      if (!flyingRings[i].active && flyingRings[i].age > 3) flyingRings.splice(i, 1);
     }
   }
 
@@ -1368,38 +1192,12 @@ async function main() {
   // Zen state
   let zenGoldenCount = 0;
 
-  // Frenzy system
-  let frenzyActive = false;
-  let frenzyTimer = 0;
-  let frenzyMultiplier = 2;
-  let frenzyNextCheck = 15; // seconds until next frenzy chance
-  let frenzyCount = 0;
-
-  // Elimination state
-  let elimPegsRinged = new Set<string>();
-  let elimBoardClears = 0;
-  let elimPerfectClears = 0;
-  let elimFirstPegGolden = false;
-
-  // Ricochet state
-  let ricochetBounceHits = 0;
-  let ricochetOnlyBounces = true;
-
-  // Laser aim state
-  let laserAimActive = false;
-  let laserAimTimer = 0;
-  let laserAimRingers = 0;
-
-  // Board layout tracking
-  let currentLayout = 0;
-  let layoutsPlayed = new Set<number>();
-
   // ============================================================
   // POWER-UP SYSTEM
   // ============================================================
 
   function selectRandomPowerUp(): PowerUpType {
-    const types: PowerUpType[] = ['multi', 'magnet', 'fire', 'giant', 'ghost', 'slowmo', 'laser', 'bounce'];
+    const types: PowerUpType[] = ['multi', 'magnet', 'fire', 'giant', 'ghost', 'slowmo'];
     return types[Math.floor(Math.random() * types.length)];
   }
 
@@ -1410,9 +1208,7 @@ async function main() {
     checkAchievement('pu_first');
     if (save.stats.powerUpsUsed >= 10) checkAchievement('pu_10');
     if (save.stats.powerUpsUsed >= 50) checkAchievement('pu_50');
-    if (save.stats.powerUpsUsed >= 100) checkAchievement('pu_100');
     if (powerUpTypesUsed.size >= 6) checkAchievement('pu_all_types');
-    if (powerUpTypesUsed.size >= 8) checkAchievement('pu_all_8');
 
     audio.playSfx('powerup');
     showToast(def.name + '!');
@@ -1422,12 +1218,6 @@ async function main() {
       powerUpTimer = 5;
       slowmoRingersCount = 0;
       audio.playSfx('slowmo');
-    } else if (type === 'laser') {
-      laserAimActive = true;
-      laserAimTimer = 8;
-      laserAimRingers = 0;
-      save.stats.laserAims++;
-      checkAchievement('pu_laser_first');
     }
 
     activePowerUp = type;
@@ -1462,69 +1252,6 @@ async function main() {
     // Precision mode: 5x scoring
     if (gameMode === 'precision') points *= 5;
 
-    // Frenzy multiplier
-    if (frenzyActive) {
-      points *= frenzyMultiplier;
-      save.stats.frenzyBonuses++;
-      checkAchievement('frenzy_first');
-      if (save.stats.frenzyBonuses >= 5) checkAchievement('frenzy_5');
-      if (save.stats.frenzyBonuses >= 10) checkAchievement('frenzy_10');
-      if (peg.points >= 100) checkAchievement('frenzy_golden');
-      if (gameCombo >= 8) checkAchievement('frenzy_combo_8');
-    }
-
-    // Ricochet mode: bonus for intentional bounces
-    if (gameMode === 'ricochet' && bounced) {
-      points *= 2;
-      ricochetBounceHits++;
-      if (peg.points >= 100) checkAchievement('ricochet_golden_bounce');
-      if (ricochetBounceHits >= 5) checkAchievement('ricochet_bounce_5');
-      if (ricochetBounceHits >= 10) checkAchievement('ricochet_bounce_10');
-      if (gameCombo >= 5 && ricochetOnlyBounces) checkAchievement('ricochet_combo_5');
-      showToast('RICOCHET! x2');
-    }
-    if (gameMode === 'ricochet' && !bounced) ricochetOnlyBounces = false;
-
-    // Elimination mode: track pegs hit
-    if (gameMode === 'elimination') {
-      const pegKey = `${peg.x},${peg.z}`;
-      if (!elimPegsRinged.has(pegKey)) {
-        elimPegsRinged.add(pegKey);
-        if (elimPegsRinged.size === 1 && peg.points >= 100) {
-          elimFirstPegGolden = true;
-          checkAchievement('elim_golden_first');
-        }
-        // Check board clear
-        if (elimPegsRinged.size >= activePegs.length) {
-          elimBoardClears++;
-          save.stats.boardClears++;
-          save.stats.eliminationClears++;
-          checkAchievement('elim_clear');
-          if (save.stats.boardClears >= 3) { checkAchievement('elim_3_clears'); checkAchievement('elim_3_clears'); }
-          if (gameRingsThrown <= 6) checkAchievement('elim_fast_clear');
-          if (gameMisses === 0) { elimPerfectClears++; checkAchievement('elim_no_miss'); }
-          if (elimPerfectClears >= 3) checkAchievement('elim_3_no_miss');
-          if (gameCombo >= 3) checkAchievement('elim_combo_clear');
-          if (elimBoardClears >= 3) checkAchievement('elim_chain_3');
-          particles.emit(0, 2, -3, 50, '#ffcc00', 4, 1.2);
-          showToast('BOARD CLEARED!');
-          audio.playSfx('levelup');
-          // Reset for next board or end
-          elimPegsRinged.clear();
-          gameRingsLeft += 5; // bonus rings
-          gameScore += 500; // clear bonus
-        }
-      }
-    }
-
-    // Laser aim tracking
-    if (laserAimActive) {
-      laserAimRingers++;
-      if (laserAimRingers >= 3) checkAchievement('pu_laser_3');
-      if (peg.points >= 100) checkAchievement('pu_laser_golden');
-      if (gameCombo >= 5) checkAchievement('pu_laser_combo');
-    }
-
     // Carnival bonus multiplier
     if (gameMode === 'carnival' && peg.moving) {
       points *= 2;
@@ -1556,13 +1283,6 @@ async function main() {
     if (giant) { save.stats.giantRingers++; if (save.stats.giantRingers >= 5) checkAchievement('pu_giant'); if (gameCombo >= 5) checkAchievement('pu_giant_combo'); }
     if (slowmoActive) { slowmoRingersCount++; save.stats.slowmoRingers++; if (slowmoRingersCount >= 3) checkAchievement('pu_slowmo'); }
     if (activePowerUp && gameCombo >= 5) checkAchievement('pu_combo_5');
-
-    // Bounce ring tracking
-    if (bounced && activePowerUp === 'bounce') {
-      save.stats.bounceRingers++;
-      checkAchievement('pu_bounce_first');
-      if (peg.points >= 100) checkAchievement('pu_bounce_golden');
-    }
 
     // Slowmo ringer count
     if (slowmoActive) save.stats.slowmoRingers++;
@@ -1821,20 +1541,6 @@ async function main() {
         gameTimeLeft = 0;
         windEnabled = false;
         break;
-      case 'ricochet':
-        gameRingsLeft = diff === 'easy' ? 15 : diff === 'medium' ? 10 : 7;
-        gameTimeLeft = 0;
-        ricochetBounceHits = 0;
-        ricochetOnlyBounces = true;
-        break;
-      case 'elimination':
-        gameRingsLeft = diff === 'easy' ? 20 : diff === 'medium' ? 15 : 10;
-        gameTimeLeft = 0;
-        elimPegsRinged.clear();
-        elimBoardClears = 0;
-        elimPerfectClears = 0;
-        elimFirstPegGolden = false;
-        break;
       case 'custom':
         gameRingsLeft = save.customSettings.rings;
         gameTimeLeft = save.customSettings.time;
@@ -1847,28 +1553,6 @@ async function main() {
     gameRingsThrown = 0;
     windThrowCounter = 0;
 
-    // Reset frenzy state
-    frenzyActive = false;
-    frenzyTimer = 0;
-    frenzyNextCheck = 15 + Math.random() * 15;
-    frenzyCount = 0;
-
-    // Reset laser aim
-    laserAimActive = false;
-    laserAimTimer = 0;
-    laserAimRingers = 0;
-
-    // Rotate board layout (not for carnival which has its own layout)
-    if (mode !== 'carnival') {
-      currentLayout = (currentLayout + 1) % ALTERNATE_LAYOUTS.length;
-      activePegs = [...ALTERNATE_LAYOUTS[currentLayout]];
-      layoutsPlayed.add(currentLayout);
-      if (currentLayout === 1) checkAchievement('layout_diamond');
-      if (currentLayout === 2) checkAchievement('layout_circle');
-      if (currentLayout === 3) checkAchievement('layout_zigzag');
-      if (layoutsPlayed.size >= 4) checkAchievement('layout_all');
-    }
-
     // Rebuild pegs for new layout
     buildPegs();
 
@@ -1877,7 +1561,6 @@ async function main() {
       save.stats.modesPlayed.push(mode);
       if (save.stats.modesPlayed.length >= 8) checkAchievement('all_modes');
       if (save.stats.modesPlayed.length >= 12) checkAchievement('all_12_modes');
-      if (save.stats.modesPlayed.length >= 14) checkAchievement('all_12_modes');
     }
 
     const skinName = RING_SKINS[save.skin].name;
@@ -1892,9 +1575,6 @@ async function main() {
       if (save.stats.themesUsed.length >= 5) checkAchievement('theme_all');
       if (save.stats.themesUsed.length >= 10) checkAchievement('all_themes_10');
     }
-
-    // Track total rings milestone
-    if (save.stats.totalRings >= 500) checkAchievement('trail_master');
 
     saveSave(save);
 
@@ -2040,22 +1720,9 @@ async function main() {
       if (gameRingsThrown >= 100) checkAchievement('zen_100rings');
     }
 
-    // Ricochet mode achievements
-    if (gameMode === 'ricochet') {
-      checkAchievement('ricochet_first');
-      if (gameScore >= 3000) checkAchievement('ricochet_score_3k');
-      if (accuracy >= 1.0 && gameRingsThrown >= 5) checkAchievement('ricochet_perfect');
-    }
-
-    // Elimination mode achievements
-    if (gameMode === 'elimination') {
-      checkAchievement('elim_first');
-      if (gameScore >= 5000) checkAchievement('elim_score_5k');
-    }
-
     // Skin unlock checks
     const unlockedSkins = RING_SKINS.filter(s => s.condition(save)).length;
-    if (unlockedSkins >= RING_SKINS.length) checkAchievement('all_skins');
+    if (unlockedSkins >= 14) checkAchievement('all_skins');
 
     // Daily
     if (gameMode === 'daily') {
@@ -2234,7 +1901,7 @@ async function main() {
     bind(titleEntity, 'btn-history', () => { audio.playSfx('click'); gameState = 'history'; refreshHistory(); hideAllPanels(); showPanel(historyEntity); });
 
     // Mode select - all 12 modes + custom
-    const modes: GameMode[] = ['classic', 'speed', 'target', 'distance', 'trick', 'daily', 'survival', 'practice', 'marathon', 'precision', 'carnival', 'zen', 'ricochet', 'elimination'];
+    const modes: GameMode[] = ['classic', 'speed', 'target', 'distance', 'trick', 'daily', 'survival', 'practice', 'marathon', 'precision', 'carnival', 'zen'];
     modes.forEach(m => {
       bind(modeEntity, 'btn-' + m, () => { audio.playSfx('click'); gameMode = m; gameState = 'difficulty'; hideAllPanels(); showPanel(diffEntity); });
     });
@@ -2309,8 +1976,8 @@ async function main() {
       applyTheme(); saveSave(save); audio.playSfx('click');
     });
 
-    // Skins (20 total)
-    for (let i = 0; i < RING_SKINS.length; i++) {
+    // Skins (14 total)
+    for (let i = 0; i < 14; i++) {
       bind(skinsEntity, 'btn-skin-' + i, () => {
         if (RING_SKINS[i].condition(save)) {
           save.skin = i; saveSave(save); refreshSkins(); audio.playSfx('click');
@@ -2403,7 +2070,7 @@ async function main() {
   }
 
   function refreshSkins() {
-    for (let i = 0; i < RING_SKINS.length; i++) {
+    for (let i = 0; i < 14; i++) {
       const s = RING_SKINS[i];
       if (!s) continue;
       const unlocked = s.condition(save);
@@ -2470,14 +2137,13 @@ async function main() {
   function doThrow() {
     if (gameRingsLeft <= 0 && gameRingsLeft < 900) return;
 
-    const flags: { magnet?: boolean; ghost?: boolean; giant?: boolean; fire?: boolean; offsetX?: number; bounce?: boolean } = {};
+    const flags: { magnet?: boolean; ghost?: boolean; giant?: boolean; fire?: boolean; offsetX?: number } = {};
 
     // Apply active power-up
     if (activePowerUp === 'magnet') { flags.magnet = true; activePowerUp = null; save.stats.magnetPulls++; }
     else if (activePowerUp === 'ghost') { flags.ghost = true; activePowerUp = null; }
     else if (activePowerUp === 'giant') { flags.giant = true; activePowerUp = null; }
     else if (activePowerUp === 'fire') { flags.fire = true; activePowerUp = null; }
-    else if (activePowerUp === 'bounce') { flags.bounce = true; activePowerUp = null; checkAchievement('pu_bounce_first'); }
     else if (activePowerUp === 'multi') {
       // Throw 3 rings
       throwRing(chargePower, aimX, aimY, { offsetX: -0.1 });
@@ -2648,10 +2314,6 @@ async function main() {
     let vx = aimX * 1.5, vy = upSpeed, vz = -speed;
     const simDt = 0.05;
 
-    // Laser aim: brighter, more dots, solid line
-    const dotOpacity = laserAimActive ? 0.7 : 0.3;
-    const dotColor = laserAimActive ? '#ff0000' : theme().accent;
-
     for (let i = 0; i < 30; i++) {
       // Apply wind to simulation
       if (windEnabled) {
@@ -2664,14 +2326,7 @@ async function main() {
       vy -= 6.0 * simDt;
 
       aimDots[i].position.set(px, py, pz);
-      (aimDots[i].material as MeshBasicMaterial).color.set(dotColor);
-      (aimDots[i].material as MeshBasicMaterial).opacity = dotOpacity * (1 - i / 30);
-      // Laser: larger dots
-      if (laserAimActive) {
-        aimDots[i].scale.setScalar(2.0);
-      } else {
-        aimDots[i].scale.setScalar(1.0);
-      }
+      (aimDots[i].material as MeshBasicMaterial).opacity = 0.3 * (1 - i / 30);
       if (py < 0) break;
     }
   }
@@ -2737,33 +2392,6 @@ async function main() {
         powerUpTimer -= dt;
         updatePanel(puEntity, 'pu-timer', Math.ceil(powerUpTimer) + 's');
         if (powerUpTimer <= 0) { slowmoActive = false; activePowerUp = null; showToast('Slow-Mo ended'); }
-      }
-
-      // Laser aim timer
-      if (laserAimActive) {
-        laserAimTimer -= dt;
-        if (laserAimTimer <= 0) { laserAimActive = false; showToast('Laser Aim ended'); }
-      }
-
-      // Frenzy system
-      if (!frenzyActive) {
-        frenzyNextCheck -= dt;
-        if (frenzyNextCheck <= 0 && gameMode !== 'zen' && gameMode !== 'practice') {
-          frenzyActive = true;
-          frenzyMultiplier = Math.random() < 0.3 ? 3 : 2;
-          frenzyTimer = 5 + Math.random() * 5;
-          frenzyCount++;
-          showToast('SCORE FRENZY x' + frenzyMultiplier + '!');
-          audio.playSfx('wave');
-          particles.emit(0, 2, -3, 30, '#ffcc00', 3, 1);
-        }
-      } else {
-        frenzyTimer -= dt;
-        if (frenzyTimer <= 0) {
-          frenzyActive = false;
-          frenzyNextCheck = 20 + Math.random() * 20;
-          showToast('Frenzy ended');
-        }
       }
 
       // Check if out of rings
@@ -2833,8 +2461,8 @@ async function main() {
 
     // Combo intensity: lights pulse brighter with combo
     const comboIntensity = Math.min(gameCombo / 10, 1);
-    comboLight.intensity = comboIntensity * 0.8 + (frenzyActive ? 0.5 : 0);
-    comboLight.color.set(frenzyActive ? '#ffcc00' : gameCombo >= 8 ? '#ffcc00' : gameCombo >= 5 ? '#ff8800' : theme().accent);
+    comboLight.intensity = comboIntensity * 0.8;
+    comboLight.color.set(gameCombo >= 8 ? '#ffcc00' : gameCombo >= 5 ? '#ff8800' : theme().accent);
 
     // Slow-mo visual: accent light flicker
     if (slowmoActive) {
