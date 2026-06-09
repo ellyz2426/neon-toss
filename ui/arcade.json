@@ -1,0 +1,323 @@
+{
+  "element": {
+    "type": "container",
+    "sourceTag": "div",
+    "children": [
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "span",
+            "type": "custom",
+            "children": [
+              "LEVEL"
+            ],
+            "properties": {
+              "class": "arcade-label"
+            },
+            "dataUid": "uid-3"
+          },
+          {
+            "sourceTag": "span",
+            "type": "custom",
+            "children": [
+              "1"
+            ],
+            "properties": {
+              "id": "arc-level",
+              "class": "level-text"
+            },
+            "dataUid": "uid-4"
+          }
+        ],
+        "properties": {
+          "class": "arcade-col"
+        },
+        "dataUid": "uid-2"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "span",
+            "type": "custom",
+            "children": [
+              "LIVES"
+            ],
+            "properties": {
+              "class": "arcade-label"
+            },
+            "dataUid": "uid-6"
+          },
+          {
+            "sourceTag": "span",
+            "type": "custom",
+            "children": [
+              "♥♥♥"
+            ],
+            "properties": {
+              "id": "arc-lives",
+              "class": "lives-text"
+            },
+            "dataUid": "uid-7"
+          }
+        ],
+        "properties": {
+          "class": "arcade-col"
+        },
+        "dataUid": "uid-5"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "sourceTag": "span",
+            "type": "custom",
+            "children": [
+              "BONUS"
+            ],
+            "properties": {
+              "class": "arcade-label"
+            },
+            "dataUid": "uid-9"
+          },
+          {
+            "sourceTag": "span",
+            "type": "custom",
+            "children": [
+              "--"
+            ],
+            "properties": {
+              "id": "arc-bonus",
+              "class": "arcade-val"
+            },
+            "dataUid": "uid-10"
+          }
+        ],
+        "properties": {
+          "class": "arcade-col"
+        },
+        "dataUid": "uid-8"
+      }
+    ],
+    "properties": {
+      "class": "arcade-panel"
+    },
+    "dataUid": "uid-1"
+  },
+  "classes": {
+    "arcade-panel": {
+      "content": {
+        "display": "flex",
+        "flexDirection": "row",
+        "padding": "1.5",
+        "backgroundColor": "rgba(0, 0, 0, 0.85)",
+        "borderColor": "#ff33ff",
+        "borderWidth": "0.15",
+        "borderRadius": 0.8,
+        "gap": "3",
+        "alignItems": "center"
+      }
+    },
+    "arcade-col": {
+      "content": {
+        "display": "flex",
+        "flexDirection": "column",
+        "alignItems": "center",
+        "gap": "0.3"
+      }
+    },
+    "arcade-label": {
+      "content": {
+        "fontSize": "1.2",
+        "color": "#888888"
+      }
+    },
+    "arcade-val": {
+      "content": {
+        "fontSize": "2",
+        "color": "#ff33ff",
+        "fontWeight": "bold"
+      }
+    },
+    "lives-text": {
+      "content": {
+        "fontSize": "2",
+        "color": "#ff3344",
+        "fontWeight": "bold"
+      }
+    },
+    "level-text": {
+      "content": {
+        "fontSize": "2",
+        "color": "#ffcc00",
+        "fontWeight": "bold"
+      }
+    }
+  },
+  "ranges": {
+    "arcade-panel": {
+      "start": {
+        "line": 1,
+        "column": 2
+      },
+      "end": {
+        "line": 1,
+        "column": 15
+      }
+    },
+    "arcade-col": {
+      "start": {
+        "line": 12,
+        "column": 2
+      },
+      "end": {
+        "line": 12,
+        "column": 13
+      }
+    },
+    "arcade-label": {
+      "start": {
+        "line": 18,
+        "column": 2
+      },
+      "end": {
+        "line": 18,
+        "column": 15
+      }
+    },
+    "arcade-val": {
+      "start": {
+        "line": 22,
+        "column": 2
+      },
+      "end": {
+        "line": 22,
+        "column": 13
+      }
+    },
+    "lives-text": {
+      "start": {
+        "line": 27,
+        "column": 2
+      },
+      "end": {
+        "line": 27,
+        "column": 13
+      }
+    },
+    "level-text": {
+      "start": {
+        "line": 32,
+        "column": 2
+      },
+      "end": {
+        "line": 32,
+        "column": 13
+      }
+    },
+    "uid-1": {
+      "start": {
+        "line": 38,
+        "column": 0
+      },
+      "end": {
+        "line": 51,
+        "column": 6
+      }
+    },
+    "uid-2": {
+      "start": {
+        "line": 39,
+        "column": 2
+      },
+      "end": {
+        "line": 42,
+        "column": 8
+      }
+    },
+    "uid-3": {
+      "start": {
+        "line": 40,
+        "column": 4
+      },
+      "end": {
+        "line": 40,
+        "column": 43
+      }
+    },
+    "uid-4": {
+      "start": {
+        "line": 41,
+        "column": 4
+      },
+      "end": {
+        "line": 41,
+        "column": 52
+      }
+    },
+    "uid-5": {
+      "start": {
+        "line": 43,
+        "column": 2
+      },
+      "end": {
+        "line": 46,
+        "column": 8
+      }
+    },
+    "uid-6": {
+      "start": {
+        "line": 44,
+        "column": 4
+      },
+      "end": {
+        "line": 44,
+        "column": 43
+      }
+    },
+    "uid-7": {
+      "start": {
+        "line": 45,
+        "column": 4
+      },
+      "end": {
+        "line": 45,
+        "column": 54
+      }
+    },
+    "uid-8": {
+      "start": {
+        "line": 47,
+        "column": 2
+      },
+      "end": {
+        "line": 50,
+        "column": 8
+      }
+    },
+    "uid-9": {
+      "start": {
+        "line": 48,
+        "column": 4
+      },
+      "end": {
+        "line": 48,
+        "column": 43
+      }
+    },
+    "uid-10": {
+      "start": {
+        "line": 49,
+        "column": 4
+      },
+      "end": {
+        "line": 49,
+        "column": 53
+      }
+    }
+  }
+}

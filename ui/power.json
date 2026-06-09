@@ -1,0 +1,85 @@
+{
+  "element": {
+    "type": "container",
+    "sourceTag": "div",
+    "children": [
+      {
+        "sourceTag": "span",
+        "type": "custom",
+        "children": [
+          ".........."
+        ],
+        "properties": {
+          "id": "power-bar",
+          "class": "fill"
+        },
+        "dataUid": "uid-2"
+      }
+    ],
+    "properties": {
+      "class": "bar"
+    },
+    "dataUid": "uid-1"
+  },
+  "classes": {
+    "bar": {
+      "content": {
+        "display": "flex",
+        "padding": "0.3",
+        "backgroundColor": "rgba(0,0,0,0.6)",
+        "borderColor": "#00ffff",
+        "borderWidth": "0.03",
+        "borderRadius": 0.3
+      }
+    },
+    "fill": {
+      "content": {
+        "fontSize": "1.2",
+        "color": "#00ffff",
+        "fontWeight": "bold"
+      }
+    }
+  },
+  "ranges": {
+    "bar": {
+      "start": {
+        "line": 2,
+        "column": 2
+      },
+      "end": {
+        "line": 2,
+        "column": 6
+      }
+    },
+    "fill": {
+      "start": {
+        "line": 3,
+        "column": 2
+      },
+      "end": {
+        "line": 3,
+        "column": 7
+      }
+    },
+    "uid-1": {
+      "start": {
+        "line": 5,
+        "column": 0
+      },
+      "end": {
+        "line": 7,
+        "column": 6
+      }
+    },
+    "uid-2": {
+      "start": {
+        "line": 6,
+        "column": 2
+      },
+      "end": {
+        "line": 6,
+        "column": 53
+      }
+    }
+  }
+}

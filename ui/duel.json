@@ -1,0 +1,459 @@
+{
+  "element": {
+    "type": "container",
+    "sourceTag": "div",
+    "children": [
+      {
+        "sourceTag": "span",
+        "type": "custom",
+        "children": [
+          "DUEL MODE"
+        ],
+        "properties": {
+          "class": "duel-title"
+        },
+        "dataUid": "uid-2"
+      },
+      {
+        "sourceTag": "span",
+        "type": "custom",
+        "children": [
+          "Round 1 of 3"
+        ],
+        "properties": {
+          "id": "duel-round",
+          "class": "round-text"
+        },
+        "dataUid": "uid-3"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              {
+                "sourceTag": "span",
+                "type": "custom",
+                "children": [
+                  "YOU"
+                ],
+                "properties": {
+                  "class": "player-label"
+                },
+                "dataUid": "uid-6"
+              },
+              {
+                "sourceTag": "span",
+                "type": "custom",
+                "children": [
+                  "0"
+                ],
+                "properties": {
+                  "id": "duel-p-score",
+                  "class": "score-big"
+                },
+                "dataUid": "uid-7"
+              }
+            ],
+            "properties": {
+              "class": "duel-col"
+            },
+            "dataUid": "uid-5"
+          },
+          {
+            "sourceTag": "span",
+            "type": "custom",
+            "children": [
+              "VS"
+            ],
+            "properties": {
+              "class": "vs-text"
+            },
+            "dataUid": "uid-8"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              {
+                "sourceTag": "span",
+                "type": "custom",
+                "children": [
+                  "CPU"
+                ],
+                "properties": {
+                  "class": "ai-label"
+                },
+                "dataUid": "uid-10"
+              },
+              {
+                "sourceTag": "span",
+                "type": "custom",
+                "children": [
+                  "0"
+                ],
+                "properties": {
+                  "id": "duel-ai-score",
+                  "class": "score-big"
+                },
+                "dataUid": "uid-11"
+              }
+            ],
+            "properties": {
+              "class": "duel-col"
+            },
+            "dataUid": "uid-9"
+          }
+        ],
+        "properties": {
+          "class": "duel-row"
+        },
+        "dataUid": "uid-4"
+      },
+      {
+        "sourceTag": "span",
+        "type": "custom",
+        "children": [
+          "YOUR TURN"
+        ],
+        "properties": {
+          "id": "duel-turn",
+          "class": "turn-text"
+        },
+        "dataUid": "uid-12"
+      },
+      {
+        "sourceTag": "span",
+        "type": "custom",
+        "children": [
+          "Rings: 5"
+        ],
+        "properties": {
+          "id": "duel-rings",
+          "class": "round-text"
+        },
+        "dataUid": "uid-13"
+      }
+    ],
+    "properties": {
+      "class": "duel-panel"
+    },
+    "dataUid": "uid-1"
+  },
+  "classes": {
+    "duel-panel": {
+      "content": {
+        "display": "flex",
+        "flexDirection": "column",
+        "padding": "2",
+        "backgroundColor": "rgba(0, 0, 0, 0.85)",
+        "borderColor": "#ff8800",
+        "borderWidth": "0.15",
+        "borderRadius": 1,
+        "gap": "1",
+        "alignItems": "center"
+      }
+    },
+    "duel-title": {
+      "content": {
+        "fontSize": "2.5",
+        "color": "#ff8800",
+        "fontWeight": "bold"
+      }
+    },
+    "duel-row": {
+      "content": {
+        "display": "flex",
+        "flexDirection": "row",
+        "gap": "4",
+        "alignItems": "center",
+        "width": "100%",
+        "justifyContent": "center"
+      }
+    },
+    "duel-col": {
+      "content": {
+        "display": "flex",
+        "flexDirection": "column",
+        "alignItems": "center",
+        "gap": "0.5",
+        "minWidth": "30%"
+      }
+    },
+    "player-label": {
+      "content": {
+        "fontSize": "1.8",
+        "color": "#00ffff",
+        "fontWeight": "bold"
+      }
+    },
+    "ai-label": {
+      "content": {
+        "fontSize": "1.8",
+        "color": "#ff3344",
+        "fontWeight": "bold"
+      }
+    },
+    "score-big": {
+      "content": {
+        "fontSize": "3",
+        "color": "#ffffff",
+        "fontWeight": "bold"
+      }
+    },
+    "vs-text": {
+      "content": {
+        "fontSize": "2",
+        "color": "#888888",
+        "fontWeight": "bold"
+      }
+    },
+    "turn-text": {
+      "content": {
+        "fontSize": "1.5",
+        "color": "#ffcc00"
+      }
+    },
+    "round-text": {
+      "content": {
+        "fontSize": "1.4",
+        "color": "#aaaaaa"
+      }
+    }
+  },
+  "ranges": {
+    "duel-panel": {
+      "start": {
+        "line": 1,
+        "column": 2
+      },
+      "end": {
+        "line": 1,
+        "column": 13
+      }
+    },
+    "duel-title": {
+      "start": {
+        "line": 12,
+        "column": 2
+      },
+      "end": {
+        "line": 12,
+        "column": 13
+      }
+    },
+    "duel-row": {
+      "start": {
+        "line": 17,
+        "column": 2
+      },
+      "end": {
+        "line": 17,
+        "column": 11
+      }
+    },
+    "duel-col": {
+      "start": {
+        "line": 25,
+        "column": 2
+      },
+      "end": {
+        "line": 25,
+        "column": 11
+      }
+    },
+    "player-label": {
+      "start": {
+        "line": 32,
+        "column": 2
+      },
+      "end": {
+        "line": 32,
+        "column": 15
+      }
+    },
+    "ai-label": {
+      "start": {
+        "line": 37,
+        "column": 2
+      },
+      "end": {
+        "line": 37,
+        "column": 11
+      }
+    },
+    "score-big": {
+      "start": {
+        "line": 42,
+        "column": 2
+      },
+      "end": {
+        "line": 42,
+        "column": 12
+      }
+    },
+    "vs-text": {
+      "start": {
+        "line": 47,
+        "column": 2
+      },
+      "end": {
+        "line": 47,
+        "column": 10
+      }
+    },
+    "turn-text": {
+      "start": {
+        "line": 52,
+        "column": 2
+      },
+      "end": {
+        "line": 52,
+        "column": 12
+      }
+    },
+    "round-text": {
+      "start": {
+        "line": 56,
+        "column": 2
+      },
+      "end": {
+        "line": 56,
+        "column": 13
+      }
+    },
+    "uid-1": {
+      "start": {
+        "line": 61,
+        "column": 0
+      },
+      "end": {
+        "line": 77,
+        "column": 6
+      }
+    },
+    "uid-2": {
+      "start": {
+        "line": 62,
+        "column": 2
+      },
+      "end": {
+        "line": 62,
+        "column": 43
+      }
+    },
+    "uid-3": {
+      "start": {
+        "line": 63,
+        "column": 2
+      },
+      "end": {
+        "line": 63,
+        "column": 62
+      }
+    },
+    "uid-4": {
+      "start": {
+        "line": 64,
+        "column": 2
+      },
+      "end": {
+        "line": 74,
+        "column": 8
+      }
+    },
+    "uid-5": {
+      "start": {
+        "line": 65,
+        "column": 4
+      },
+      "end": {
+        "line": 68,
+        "column": 10
+      }
+    },
+    "uid-6": {
+      "start": {
+        "line": 66,
+        "column": 6
+      },
+      "end": {
+        "line": 66,
+        "column": 43
+      }
+    },
+    "uid-7": {
+      "start": {
+        "line": 67,
+        "column": 6
+      },
+      "end": {
+        "line": 67,
+        "column": 56
+      }
+    },
+    "uid-8": {
+      "start": {
+        "line": 69,
+        "column": 4
+      },
+      "end": {
+        "line": 69,
+        "column": 35
+      }
+    },
+    "uid-9": {
+      "start": {
+        "line": 70,
+        "column": 4
+      },
+      "end": {
+        "line": 73,
+        "column": 10
+      }
+    },
+    "uid-10": {
+      "start": {
+        "line": 71,
+        "column": 6
+      },
+      "end": {
+        "line": 71,
+        "column": 39
+      }
+    },
+    "uid-11": {
+      "start": {
+        "line": 72,
+        "column": 6
+      },
+      "end": {
+        "line": 72,
+        "column": 57
+      }
+    },
+    "uid-12": {
+      "start": {
+        "line": 75,
+        "column": 2
+      },
+      "end": {
+        "line": 75,
+        "column": 57
+      }
+    },
+    "uid-13": {
+      "start": {
+        "line": 76,
+        "column": 2
+      },
+      "end": {
+        "line": 76,
+        "column": 58
+      }
+    }
+  }
+}
